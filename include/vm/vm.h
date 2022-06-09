@@ -2,16 +2,17 @@
 #define VM_VM_H
 #include <stdbool.h>
 #include "threads/palloc.h"
+#include "kernel/hash.h"
 
 enum vm_type {
 	/* page not initialized */
 	VM_UNINIT = 0,
 	/* page not related to the file, aka anonymous page */
-	VM_ANON = 1,
+	VM_ANON = 1, // 스왑영역으로 부터 데이터 로드
 	/* page that realated to the file */
-	VM_FILE = 2,
+	VM_FILE = 2, // 매핑된 파일로부터 데이터 로드
 	/* page that hold the page cache, for project 4 */
-	VM_PAGE_CACHE = 3,
+	VM_PAGE_CACHE = 3, 
 
 	/* Bit flags to store state */
 
@@ -47,6 +48,8 @@ struct page {
 
 	/* Your implementation */
 
+	struct hash_elem hash_elem; /* 추가 - Hash table element. */
+
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
 	union {
@@ -59,9 +62,12 @@ struct page {
 	};
 };
 
-/* The representation of "frame" */
+
+/* The representation of "frame" 
+	1번 - 추가해도된다. 
+*/
 struct frame {
-	void *kva;
+	void *kva; //커널주소
 	struct page *page;
 };
 
@@ -83,18 +89,23 @@ struct page_operations {
 
 /* Representation of current process's memory space.
  * We don't want to force you to obey any specific design for this struct.
- * All designs up to you for this. */
-struct supplemental_page_table {
+ * All designs up to you for this. 
+ * 
+ * 페이지 폴트를 처리하고 리소스 관리를 하기위해 spt로 추가 정보를 들고있어야한다. 
+ * 
+ * */
+struct supplemental_page_table { //페이지 테이블
+	struct hash spt_hash;
 };
 
 #include "threads/thread.h"
-void supplemental_page_table_init (struct supplemental_page_table *spt);
+void supplemental_page_table_init (struct supplemental_page_table *spt); //1번
 bool supplemental_page_table_copy (struct supplemental_page_table *dst,
 		struct supplemental_page_table *src);
 void supplemental_page_table_kill (struct supplemental_page_table *spt);
 struct page *spt_find_page (struct supplemental_page_table *spt,
-		void *va);
-bool spt_insert_page (struct supplemental_page_table *spt, struct page *page);
+		void *va); //1번
+bool spt_insert_page (struct supplemental_page_table *spt, struct page *page); //1번
 void spt_remove_page (struct supplemental_page_table *spt, struct page *page);
 
 void vm_init (void);
@@ -108,5 +119,11 @@ bool vm_alloc_page_with_initializer (enum vm_type type, void *upage,
 void vm_dealloc_page (struct page *page);
 bool vm_claim_page (void *va);
 enum vm_type page_get_type (struct page *page);
+
+
+//추가//////////
+unsigned page_hash (const struct hash_elem *p_, void *aux UNUSED);
+bool page_less (const struct hash_elem *a_,
+           const struct hash_elem *b_, void *aux UNUSED);
 
 #endif  /* VM_VM_H */
