@@ -58,8 +58,8 @@ typedef void hash_action_func (struct hash_elem *e, void *aux);
 struct hash {
 	size_t elem_cnt;            /* Number of elements in table. */
 	size_t bucket_cnt;          /* Number of buckets, a power of 2. */
-	struct list *buckets;       /* Array of `bucket_cnt' lists. */
-	hash_hash_func *hash;       /* Hash function. */
+	struct list *buckets;       /* Array of `bucket_cnt' lists. - value list */
+	hash_hash_func *hash;       /* Hash function. - key가 인덱스로 변하여 접근하기 빠른 데이터를 검색 int 반환*/
 	hash_less_func *less;       /* Comparison function. */
 	void *aux;                  /* Auxiliary data for `hash' and `less'. */
 };

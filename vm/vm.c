@@ -63,18 +63,19 @@ err:
 	return false;
 }
 
-/* 1번 추가
+/* 1번 추가 - 이게맞아?
 	Find VA from spt and return page. On error, return NULL.
 	주어진 spt에서 va에 해당하는 struct page를 찾는다.
  */
 struct page *
 spt_find_page(struct supplemental_page_table *spt UNUSED, void *va UNUSED)
 {
-	struct page *page = NULL;
+	//struct page *page = NULL;
 	/* TODO: Fill this function. */
+	struct page page;
 	struct hash_elem *e;
-	page->va = va;
-	e = hash_find(&spt->spt_hash, &page->hash_elem);
+	page.va = va;
+	e = hash_find(&spt->spt_hash, &page.hash_elem);
 	return e != NULL ? hash_entry(e, struct page, hash_elem) : NULL;
 }
 
@@ -89,12 +90,13 @@ bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
 {
 	int succ = false;
 	/* TODO: Fill this function. */
-	if (spt_find_page(spt, page->va) == NULL)
-	{
-		return succ;
+	// if (spt_find_page(spt, page->va) == NULL)
+	// {
+	// 	return succ;
+	// }
+	if(hash_insert(&spt->spt_hash, &page->hash_elem) == NULL){
+		succ = true;
 	}
-	hash_insert(&spt->spt_hash, &page->hash_elem);
-	succ = true;
 	return succ;
 }
 
@@ -126,7 +128,7 @@ vm_evict_frame(void)
 }
 
 /*
- * 1번 - 추가
+ * 1번 - 추가 물리메모리 할당받는 함수???
  * palloc() and get frame. If there is no available page, evict the page
  * and return it. This always return valid address. That is, if the user pool
  * memory is full, this function evicts the frame to get the available memory
@@ -138,8 +140,13 @@ vm_evict_frame(void)
 static struct frame *
 vm_get_frame(void)
 {
-	struct frame *frame = NULL;
 	/* TODO: Fill this function. */
+	struct frame *frame = malloc(sizeof(struct frame)); //커널영역에 할당
+	frame->kva = palloc_get_page(PAL_USER); //물리 메모리 주소?????????
+	
+	// 초기화
+	if(frame->kva == NULL)
+		PANIC("todo");
 
 	ASSERT(frame != NULL);
 	ASSERT(frame->page == NULL);
@@ -178,24 +185,25 @@ void vm_dealloc_page(struct page *page)
 	free(page);
 }
 
-/* 1번 추가
-	 Claim the page that allocate on VA.
-	페이지 claim(물리 프레임을 할당 받는 것을 말한다.)
-	vm_get_frame을 통해 프레임을 얻어와서 MMU를 설정해준더=ㅏ.
-	가상 주소에서 물리 주소로의 매핑을 페이지 테이블에 추가한다. 성공/실패
+/* 1번 추가 페이지랑 물리메모리 매핑?
+	Claim the PAGE and set up the mmu.
+	va를 할당할 페이지를 claim한다.
+	페이지를 얻어오고 vm_do_claim_page를 수행한다.
  */
 bool vm_claim_page(void *va UNUSED)
 {
-	struct page *page = NULL;
 	/* TODO: Fill this function */
-
+	struct page *page = malloc(sizeof(struct page));
+	page->va = va;
 	return vm_do_claim_page(page);
 }
 
 /* 1번 추가
-	Claim the PAGE and set up the mmu.
-	va를 할당할 페이지를 claim한다.
-	페이지를 얻어오고 vm_do_claim_page를 수행한다.
+ 	Claim the page that allocate on VA.
+	페이지 claim(물리 프레임을 할당 받는 것을 말한다.)
+	vm_get_frame을 통해 프레임을 얻어와서 MMU를 설정해준더=ㅏ.
+	가상 주소에서 물리 주소로의 매핑을 페이지 테이블에 추가한다. 성공/실패
+
 */
 static bool
 vm_do_claim_page(struct page *page)
@@ -207,8 +215,9 @@ vm_do_claim_page(struct page *page)
 	page->frame = frame;
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
-
-	return swap_in(page, frame->kva);
+	// spt_insert_page
+	//swap_in(page, frame->kva);
+	return ?????
 }
 
 /* Initialize new supplemental page table
@@ -235,7 +244,8 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)
 }
 
 ////////영지 구현 - 1번 ///////////
-/* Returns a hash value for page p. */
+/* Returns a hash value for page p.
+addr을 키로 사용하는 해시함수 */
 unsigned
 page_hash(const struct hash_elem *p_, void *aux UNUSED)
 {
@@ -243,7 +253,9 @@ page_hash(const struct hash_elem *p_, void *aux UNUSED)
 	return hash_bytes(&p->va, sizeof p->va);
 }
 
-/* Returns true if page a precedes page b. */
+/* Returns true if page a precedes page b. 
+addr을 키로 사용하는 비교함수
+*/
 bool page_less(const struct hash_elem *a_,
 			   const struct hash_elem *b_, void *aux UNUSED)
 {

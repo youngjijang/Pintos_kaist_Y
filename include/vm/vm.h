@@ -43,8 +43,8 @@ struct thread;
  * DO NOT REMOVE/MODIFY PREDEFINED MEMBER OF THIS STRUCTURE. */
 struct page {
 	const struct page_operations *operations;
-	void *va;              /* Address in terms of user space */
-	struct frame *frame;   /* Back reference for frame */
+	void *va;              /* Address in terms of user space - 가상주소 */
+	struct frame *frame;   /* Back reference for frame - 물리 주소*/
 
 	/* Your implementation */
 
@@ -69,7 +69,7 @@ struct page {
 struct frame {
 	void *kva; //커널주소
 	struct page *page;
-};
+}; // 물리메모리를 나타내는????
 
 /* The function table for page operations.
  * This is one way of implementing "interface" in C.
