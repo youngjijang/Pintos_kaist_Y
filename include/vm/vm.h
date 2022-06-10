@@ -1,6 +1,7 @@
 #ifndef VM_VM_H
 #define VM_VM_H
 #include <stdbool.h>
+#include <list.h>
 #include "threads/palloc.h"
 #include "kernel/hash.h"
 
@@ -43,12 +44,14 @@ struct thread;
  * DO NOT REMOVE/MODIFY PREDEFINED MEMBER OF THIS STRUCTURE. */
 struct page {
 	const struct page_operations *operations;
-	void *va;              /* Address in terms of user space - 가상주소 */
+	void *va;              /* Address in terms of user space - 가상주소..데이터가 시작되는 가상 주소의 시작점*/
 	struct frame *frame;   /* Back reference for frame - 물리 주소*/
 
 	/* Your implementation */
 
 	struct hash_elem hash_elem; /* 추가 - Hash table element. */
+
+	bool writable; //쓰기 권한 추가?? pml4_set_page 때 사용
 
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
@@ -69,6 +72,8 @@ struct page {
 struct frame {
 	void *kva; //커널주소
 	struct page *page;
+
+	struct list_elem frame_elem;
 }; // 물리메모리를 나타내는????
 
 /* The function table for page operations.
@@ -125,5 +130,9 @@ enum vm_type page_get_type (struct page *page);
 unsigned page_hash (const struct hash_elem *p_, void *aux UNUSED);
 bool page_less (const struct hash_elem *a_,
            const struct hash_elem *b_, void *aux UNUSED);
+
+struct list frame_table;
+struct list swap_table;
+
 
 #endif  /* VM_VM_H */
