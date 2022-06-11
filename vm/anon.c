@@ -24,7 +24,9 @@ vm_anon_init (void) {
 	swap_disk = NULL;
 }
 
-/* Initialize the file mapping */
+/* Initialize the file mapping 
+
+*/
 bool
 anon_initializer (struct page *page, enum vm_type type, void *kva) {
 	/* Set up the handler */

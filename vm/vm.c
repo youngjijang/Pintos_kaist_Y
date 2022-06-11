@@ -4,6 +4,7 @@
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "threads/mmu.h"
+#include "vm/uninit.h"
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -47,19 +48,21 @@ static struct frame *vm_evict_frame(void);
 /* Create the pending page object with initializer. If you want to create a
  * page, do not create it directly and make it through this function or
  * `vm_alloc_page`.
+ * 
+ * 커널이 새로운 페이지 요청을 받게되면 불린다. 
+ * 페이지 구조체를 할당하고 페이지 종류에 따라 적절한 초기화를 진행한다.
+ * 
  * load_segment가 실행되며, 해당 스레드의 spt를 활용해, 각 page가 필요한 시점에 물리메모리에
  * load 될 수 있도록 처리해주어야 한다. 
  * 커널이 새 페이지 요청을 수신할 때 호출됩니다. 이니셜라이저는 페이지 구조를 할당하고 페이지 유형에 따라 
  * 적절한 이니셜라이저를 설정하여 새 페이지를 초기화하고 컨트롤을 다시 사용자 프로그램으로 반환합니다.
  *  사용자 프로그램이 실행되면서 어느 시점에서 프로그램이 소유하고 있다고 생각하지만 페이지에 아직 내용이 없는 페이지에 액세스하려고 하기 때문에 페이지 폴트가 발생합니다
- 
  *  */
 bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writable,
 									vm_initializer *init, void *aux)
 {
 	
-
-	ASSERT(VM_TYPE(type) != VM_UNINIT)
+	ASSERT(VM_TYPE(type) != VM_UNINIT);
 
 	struct supplemental_page_table *spt = &thread_current()->spt;
 
@@ -69,9 +72,18 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		/* TODO: Create the page, fetch the initialier according to the VM type,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
-		// uninit_new()
+		struct page* page = (struct page*)malloc(sizeof(struct page));
+		if (page == NULL)
+			return false;
+		
+		if (VM_TYPE(type) == VM_ANON){
+			uninit_new(page, upage, init, type, aux, anon_initializer); //type이 이게 맞나
+		}else if (VM_TYPE(type) == VM_FILE){
+			uninit_new(page, upage, init, type, aux, file_backed_initializer); 
+		}
+		
 		/* TODO: Insert the page into the spt. */
-		/* TODO: Insert the page into the spt. */
+		spt_insert_page(spt,page);
 	}
 err:
 	return false;
@@ -180,7 +192,11 @@ vm_handle_wp(struct page *page UNUSED)
 {
 }
 
-/* Return true on success */
+/* Return true on success 
+page fault 발생시 불림
+ 유효한 페이지폴트인지 확인 (유효한 page fault == 잘못된 접근)
+ 만약 유효한 페이지폴트가 아니라면  페이지에 필요한 내용을 불러오고 유저 프로그램으로 제어를 넘겨주어야 한다. 
+*/
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 						 bool user UNUSED, bool write UNUSED, bool not_present UNUSED)
 {
@@ -208,7 +224,9 @@ void vm_dealloc_page(struct page *page)
 bool vm_claim_page(void *va UNUSED)
 {
 	/* TODO: Fill this function */
-	struct page *page = spt_find_page(thread_current()->spt,va);
+	struct page *page = spt_find_page(&thread_current()->spt,va);
+	if (page == NULL)
+		return false;
 	return vm_do_claim_page(page);
 }
 
@@ -225,12 +243,12 @@ vm_do_claim_page(struct page *page)
 	struct frame *frame = vm_get_frame();
 
 	/* Set links */
-	frame->page = page;
+	frame->page = page; 
 	page->frame = frame;
 
-	//pml4_set_page(thread_current()->pml4,page->va,frame->kva,page->writable);
+	pml4_set_page(thread_current()->pml4,page->va,frame->kva,page->writable);
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
-	//swap_in(page, frame->kva);
+	//swap_in(page, frame->kva); 
 	return true;
 }
 

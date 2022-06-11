@@ -42,7 +42,9 @@ uninit_new (struct page *page, void *va, vm_initializer *init,
 	};
 }
 
-/* Initalize the page on first fault */
+/* Initalize the page on first fault 
+페이지 폴트 핸들러는 최종적으로 swap_in을 불러서 uninit_initialize에 도달한다. 
+*/
 static bool
 uninit_initialize (struct page *page, void *kva) {
 	struct uninit_page *uninit = &page->uninit;
@@ -50,6 +52,10 @@ uninit_initialize (struct page *page, void *kva) {
 	/* Fetch first, page_initialize may overwrite the values */
 	vm_initializer *init = uninit->init;
 	void *aux = uninit->aux;
+
+	// struct file_info imfofile {
+	// 	.offset = ofs
+	// }
 
 	/* TODO: You may need to fix this function. */
 	return uninit->page_initializer (page, uninit->type, kva) &&
