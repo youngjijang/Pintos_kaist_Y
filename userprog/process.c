@@ -788,7 +788,6 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-
 		printf("load_segment\n");
 		struct file_info *file_info = (struct file_info *)malloc(sizeof(struct file_info));
 		file_info->file = file;
