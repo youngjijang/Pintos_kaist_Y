@@ -40,6 +40,7 @@ uninit_new (struct page *page, void *va, vm_initializer *init,
 			.page_initializer = initializer,
 		}
 	};
+	// printf("도영아 봤니\n\n");
 }
 
 /* Initalize the page on first fault 

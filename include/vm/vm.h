@@ -50,7 +50,6 @@ struct page {
 	/* Your implementation */
 
 	struct hash_elem hash_elem; /* 추가 - Hash table element. */
-
 	bool writable; //쓰기 권한 추가?? pml4_set_page 때 사용
 
 	/* Per-type data are binded into the union.
@@ -125,7 +124,6 @@ void vm_dealloc_page (struct page *page);
 bool vm_claim_page (void *va);
 enum vm_type page_get_type (struct page *page);
 
-
 //추가//////////
 unsigned page_hash (const struct hash_elem *p_, void *aux UNUSED);
 bool page_less (const struct hash_elem *a_,
@@ -134,5 +132,13 @@ bool page_less (const struct hash_elem *a_,
 struct list frame_table;
 struct list swap_table;
 
+struct file_info
+{
+	struct file *file;
+	off_t ofs;
+	size_t page_read_bytes;
+	size_t page_zero_bytes;
+	//bool is_loaded;
+};
 
 #endif  /* VM_VM_H */

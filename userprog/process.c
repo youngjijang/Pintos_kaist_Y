@@ -19,9 +19,9 @@
 #include "threads/vaddr.h"
 #include "intrinsic.h"
 #include "userprog/syscall.h"
-#ifdef VM
+// #ifdef VM
 #include "vm/vm.h"
-#endif
+// #endif
 
 /* General process initializer for initd and other process. */
 static void
@@ -549,7 +549,6 @@ load(const char *file_name, struct intr_frame *if_)
 			break;
 		}
 	}
-
 	/* Set up stack. */
 	if (!setup_stack(if_)) //진입점을 초기화하기 위한 코드(스택 진입점)
 		goto done;
@@ -714,7 +713,7 @@ install_page(void *upage, void *kpage, bool writable)
 	 * address, then map our page there. */
 	return (pml4_get_page(t->pml4, upage) == NULL && pml4_set_page(t->pml4, upage, kpage, writable));
 }
-#else
+// #else
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
@@ -722,6 +721,36 @@ install_page(void *upage, void *kpage, bool writable)
 static bool
 lazy_load_segment(struct page *page, void *aux)
 {
+
+	struct file_info *file_info = (struct file_info *)aux;
+	struct file *file = file_info->file;
+	off_t ofs = file_info->ofs;
+	size_t page_read_bytes = file_info->page_read_bytes;
+	size_t page_zero_bytes = PGSIZE - page_read_bytes;
+
+	if (page == NULL){
+		return false;
+	}
+
+	// printf("ddddddddddddd 들어왔다~~~~\n\n");
+	
+	// printf("ddddddddddddd offfff: %d\n",ofs);
+	// printf("ddddddddddddd read: %d\n",page_read_bytes);
+	// printf("ddddddddddddd offfff: %d\n",page_zero_bytes);
+	// printf("ddddddddddddd offfff: %d\n",ofs);
+	
+	/* Load this page. */
+	if ((file_read_at(file,page->frame->kva,page_read_bytes,ofs)) != (int)page_read_bytes)
+	{
+		printf("ddddddddddddd lazt_FAlse\n\n");
+		vm_dealloc_page(page);
+		return false;
+	}
+	printf("ddddddddddddd lazt_True\n\n");
+	memset( page + page_read_bytes, 0, page_zero_bytes);
+	/* Add the page to the process's address space. */
+	free(aux);
+	return true;
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
@@ -741,6 +770,7 @@ lazy_load_segment(struct page *page, void *aux)
  *
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
+// 읽어야할 파일 / 파일 ofs으로부터 read / vm에 올릴 시작주소 / 읽고싶은 byte / 0으로 채우고자 하는 byte
 static bool
 load_segment(struct file *file, off_t ofs, uint8_t *upage,
 			 uint32_t read_bytes, uint32_t zero_bytes, bool writable)
@@ -758,16 +788,26 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		void *aux = NULL;
+
+
+		struct file_info *file_info = (struct file_info *)malloc(sizeof(struct file_info));
+		file_info->file = file;
+		file_info->page_read_bytes = page_read_bytes;
+		file_info->page_zero_bytes = page_zero_bytes;
+		file_info->ofs = ofs;
+
+		// void *aux = file_info;
 		if (!vm_alloc_page_with_initializer(VM_ANON, upage,
-											writable, lazy_load_segment, aux))
+											writable, lazy_load_segment, file_info))
 			return false;
 
 		/* Advance. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
 		upage += PGSIZE;
+		ofs += page_read_bytes;
 	}
+
 	return true;
 }
 
@@ -775,14 +815,21 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack(struct intr_frame *if_)
 {
+	
 	bool success = false;
 	void *stack_bottom = (void *)(((uint8_t *)USER_STACK) - PGSIZE);
 
+	if(!(vm_alloc_page(VM_ANON | VM_MARKER_0,stack_bottom,true))) 
+		return success;
+		
+	success = vm_claim_page(stack_bottom);
+	if (success)
+		if_->rsp = USER_STACK;	
+	
 	/* TODO: Map the stack on stack_bottom and claim the page immediately.
 	 * TODO: If success, set the rsp accordingly.
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
-
 	return success;
 }
 #endif /* VM */

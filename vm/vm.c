@@ -73,9 +73,9 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
 		struct page* page = (struct page*)malloc(sizeof(struct page));
-		if (page == NULL)
+		if (page == NULL){
 			return false;
-		
+		}
 		if (VM_TYPE(type) == VM_ANON){
 			uninit_new(page, upage, init, type, aux, anon_initializer); //type이 이게 맞나
 		}else if (VM_TYPE(type) == VM_FILE){
@@ -83,7 +83,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		}
 		
 		/* TODO: Insert the page into the spt. */
-		spt_insert_page(spt,page);
+		return spt_insert_page(spt,page);
 	}
 err:
 	return false;
@@ -98,10 +98,12 @@ spt_find_page(struct supplemental_page_table *spt UNUSED, void *va UNUSED)
 {
 	//struct page *page = NULL;
 	/* TODO: Fill this function. */
-	struct page page;
+	struct page *page = (struct page *)malloc(sizeof(struct page));
 	struct hash_elem *e;
-	page.va = va;
-	e = hash_find(&spt->spt_hash, &page.hash_elem);
+	page->va = pg_round_down(va);
+	e = hash_find(&spt->spt_hash, &page->hash_elem);
+
+	free(page);
 	return e != NULL ? hash_entry(e, struct page, hash_elem) : NULL;
 }
 
@@ -174,7 +176,8 @@ vm_get_frame(void)
 		PANIC("todo");
 		
 	list_push_back(&frame_table,&frame->frame_elem);
-
+	frame->page = NULL;
+	
 	ASSERT(frame != NULL);
 	ASSERT(frame->page == NULL);
 	return frame;
@@ -200,11 +203,15 @@ page fault 발생시 불림
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 						 bool user UNUSED, bool write UNUSED, bool not_present UNUSED)
 {
+
+	printf("@@@@@@@@@@@@@PAGE FAULT 핸들러\n\n");
 	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
-	struct page *page = NULL;
+	struct page *page = spt_find_page(spt,addr);
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
-
+	if (page == NULL){
+		return false;
+	}
 	return vm_do_claim_page(page);
 }
 
@@ -248,8 +255,7 @@ vm_do_claim_page(struct page *page)
 
 	pml4_set_page(thread_current()->pml4,page->va,frame->kva,page->writable);
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
-	//swap_in(page, frame->kva); 
-	return true;
+	return swap_in(page, frame->kva); 
 }
 
 /* Initialize new supplemental page table
