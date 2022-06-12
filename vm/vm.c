@@ -103,7 +103,7 @@ spt_find_page(struct supplemental_page_table *spt UNUSED, void *va UNUSED)
 	page->va = pg_round_down(va);
 	e = hash_find(&spt->spt_hash, &page->hash_elem);
 
-	free(page);
+	// free(page);
 	return e != NULL ? hash_entry(e, struct page, hash_elem) : NULL;
 }
 
@@ -207,6 +207,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	printf("@@@@@@@@@@@@@PAGE FAULT 핸들러\n\n");
 	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
 	struct page *page = spt_find_page(spt,addr);
+	puts("모르겠는데?");
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
 	if (page == NULL){

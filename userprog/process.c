@@ -713,7 +713,7 @@ install_page(void *upage, void *kpage, bool writable)
 	 * address, then map our page there. */
 	return (pml4_get_page(t->pml4, upage) == NULL && pml4_set_page(t->pml4, upage, kpage, writable));
 }
-// #else
+#else
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
@@ -789,7 +789,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
 
-
+		printf("load_segment\n");
 		struct file_info *file_info = (struct file_info *)malloc(sizeof(struct file_info));
 		file_info->file = file;
 		file_info->page_read_bytes = page_read_bytes;
@@ -815,7 +815,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack(struct intr_frame *if_)
 {
-	
+	puts("here?");
 	bool success = false;
 	void *stack_bottom = (void *)(((uint8_t *)USER_STACK) - PGSIZE);
 
