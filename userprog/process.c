@@ -732,22 +732,16 @@ lazy_load_segment(struct page *page, void *aux)
 		return false;
 	}
 
-	// printf("ddddddddddddd 들어왔다~~~~\n\n");
-	
-	// printf("ddddddddddddd offfff: %d\n",ofs);
-	// printf("ddddddddddddd read: %d\n",page_read_bytes);
-	// printf("ddddddddddddd offfff: %d\n",page_zero_bytes);
-	// printf("ddddddddddddd offfff: %d\n",ofs);
 	
 	/* Load this page. */
 	if ((file_read_at(file,page->frame->kva,page_read_bytes,ofs)) != (int)page_read_bytes)
 	{
-		printf("ddddddddddddd lazt_FAlse\n\n");
+		// printf("ddddddddddddd lazt_FAlse\n\n");
 		vm_dealloc_page(page);
 		return false;
 	}
-	printf("ddddddddddddd lazt_True\n\n");
-	memset( page + page_read_bytes, 0, page_zero_bytes);
+	// printf("ddddddddddddd lazt_True\n\n");
+	memset((page->frame->kva)+page_read_bytes, 0, page_zero_bytes);
 	/* Add the page to the process's address space. */
 	free(aux);
 	return true;
@@ -788,7 +782,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		printf("load_segment\n");
+		// printf("load_segment\n");
 		struct file_info *file_info = (struct file_info *)malloc(sizeof(struct file_info));
 		file_info->file = file;
 		file_info->page_read_bytes = page_read_bytes;
@@ -814,7 +808,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack(struct intr_frame *if_)
 {
-	puts("here?");
+	// puts("here?");
 	bool success = false;
 	void *stack_bottom = (void *)(((uint8_t *)USER_STACK) - PGSIZE);
 

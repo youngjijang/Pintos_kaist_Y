@@ -81,7 +81,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		}else if (VM_TYPE(type) == VM_FILE){
 			uninit_new(page, upage, init, type, aux, file_backed_initializer); 
 		}
-		
+		page->writable = writable;
 		/* TODO: Insert the page into the spt. */
 		return spt_insert_page(spt,page);
 	}
@@ -204,16 +204,18 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 						 bool user UNUSED, bool write UNUSED, bool not_present UNUSED)
 {
 
-	printf("@@@@@@@@@@@@@PAGE FAULT 핸들러\n\n");
+	// printf("@@@@@@@@@@@@@PAGE FAULT 핸들러\n\n");
 	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
 	struct page *page = spt_find_page(spt,addr);
-	puts("모르겠는데?");
+	// puts("모르겠는데?");
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
-	if (page == NULL){
+	if (page && not_present){
+		return vm_do_claim_page(page);
+	}else {
 		return false;
 	}
-	return vm_do_claim_page(page);
+	
 }
 
 /* Free the page.

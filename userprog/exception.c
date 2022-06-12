@@ -145,8 +145,6 @@ page_fault (struct intr_frame *f) {
 #ifdef VM
 	/* For project 3 and later. */
 	if (vm_try_handle_fault (f, fault_addr, user, write, not_present)){
-		printf("핸들러........ True\n\n");
-		exit(0);
 		return;
 	}
 		
