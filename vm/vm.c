@@ -5,6 +5,7 @@
 #include "vm/inspect.h"
 #include "threads/mmu.h"
 #include "vm/uninit.h"
+// #include "userprog/process.h"
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -103,7 +104,7 @@ spt_find_page(struct supplemental_page_table *spt UNUSED, void *va UNUSED)
 	page->va = pg_round_down(va);
 	e = hash_find(&spt->spt_hash, &page->hash_elem);
 
-	// free(page);
+	free(page);
 	return e != NULL ? hash_entry(e, struct page, hash_elem) : NULL;
 }
 
@@ -176,7 +177,8 @@ vm_get_frame(void)
 		PANIC("todo");
 		
 	list_push_back(&frame_table,&frame->frame_elem);
-	frame->page = NULL;
+
+	frame->page = NULL; //추가
 	
 	ASSERT(frame != NULL);
 	ASSERT(frame->page == NULL);
@@ -204,13 +206,12 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 						 bool user UNUSED, bool write UNUSED, bool not_present UNUSED)
 {
 
-	// printf("@@@@@@@@@@@@@PAGE FAULT 핸들러\n\n");
 	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
 	struct page *page = spt_find_page(spt,addr);
 	// puts("모르겠는데?");
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
-	if (page && not_present){
+	if (page && not_present){ //수정 - not_present 추가
 		return vm_do_claim_page(page);
 	}else {
 		return false;
@@ -245,7 +246,6 @@ bool vm_claim_page(void *va UNUSED)
 	페이지 claim(물리 프레임을 할당 받는 것을 말한다.)
 	vm_get_frame을 통해 프레임을 얻어와서 MMU를 설정해준더=ㅏ.
 	가상 주소에서 물리 주소로의 매핑을 페이지 테이블에 추가한다. 성공/실패
-
 */
 static bool
 vm_do_claim_page(struct page *page)
@@ -271,10 +271,48 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED)
 	hash_init(&spt->spt_hash, page_hash, page_less, NULL);
 }
 
-/* Copy supplemental page table from src to dst */
+/* Copy supplemental page table from src to dst
+ scr에서 dst로 spt 복사
+ */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
 								  struct supplemental_page_table *src UNUSED)
 {
+	struct hash *dst_h = &dst->spt_hash;
+	struct hash *src_h = &src->spt_hash;
+	struct hash_iterator i;
+	hash_first(&i, src_h);
+	while (hash_next(&i))
+	{
+		struct page *p = hash_entry(hash_cur (&i), struct page, hash_elem);
+		enum vm_type type = p->operations->type;
+		void *addr = p->va;
+		bool writable = p->writable;
+		struct page *n_p;
+		switch (VM_TYPE(type))
+		{
+		case VM_UNINIT :
+			vm_alloc_page_with_initializer(type, addr, writable, p->uninit.init, p->uninit.aux);
+			break;
+		case VM_ANON :
+			//둘이 먼차이? 
+			if(!(vm_alloc_page(type,addr,writable)))
+				return false;
+			n_p = spt_find_page(dst,addr);
+			if(!(vm_claim_page(addr)))
+				return false;
+			memcpy(n_p->frame->kva,p->frame->kva,PGSIZE);
+			break;
+		case VM_FILE :
+			//둘이 먼차이? 
+			if(!(vm_alloc_page(type,addr,writable)))
+				return false;
+			n_p = spt_find_page(dst,addr);
+			if(!(vm_claim_page(addr)))
+				return false;
+			memcpy(n_p->frame->kva,p->frame->kva,PGSIZE);
+			break;
+		}
+	}
 }
 
 /* Free the resource hold by the supplemental page table */
@@ -284,7 +322,6 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)
 	 * TODO: writeback all the modified contents to the storage. */
 }
 
-////////영지 구현 - 1번 ///////////
 /* Returns a hash value for page p.
 addr을 키로 사용하는 해시함수 */
 unsigned
@@ -305,4 +342,3 @@ bool page_less(const struct hash_elem *a_,
 
 	return a->va < b->va;
 }
-
