@@ -288,13 +288,14 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
 		void *addr = p->va;
 		bool writable = p->writable;
 		struct page *n_p;
+		struct file_info *file_info;
 		switch (VM_TYPE(type))
 		{
 		case VM_UNINIT : 
 			//lazy load가 되기 위해 기다리는 페이지 만들기
-			// struct file_info *file_info = (struct file_info *)malloc(sizeof(struct file_info));
-			// memcpy(file_info, (struct file_info *)p->uninit.aux,sizeof(struct file_info));
-			vm_alloc_page_with_initializer(VM_ANON, addr, writable, p->uninit.init,p->uninit.aux); //혜진 수정 - type uninit으로 하면 assert에 걸림
+			file_info = (struct file_info *)malloc(sizeof(struct file_info));
+			memcpy(file_info, (struct file_info *)p->uninit.aux,sizeof(struct file_info));
+			vm_alloc_page_with_initializer(VM_ANON, addr, writable, p->uninit.init,file_info); //혜진 수정 - type uninit으로 하면 assert에 걸림
 			break;
 		case VM_ANON :
 			//setup_stack 과 비슷하게 처리 
