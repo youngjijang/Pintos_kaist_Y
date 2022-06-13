@@ -5,11 +5,8 @@ struct page;
 enum vm_type;
 
 struct anon_page {
-
-    // enum vm_type type;
-    // void *aux; //보조데이터/???????
-
-    // struct list_elem anon_elem; 
+    struct page_operations *stack_op; //?? 몰라 .. page type으로 스택을 식별?
+    // struct list_elem swap_elem; 
 };
 
 void vm_anon_init (void);

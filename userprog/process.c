@@ -261,6 +261,7 @@ int process_exec(void *f_name) /* 프로세스 실행 - 실행하려는 바이�
 
 	/* We first kill the current context */
 	process_cleanup();
+	supplemental_page_table_init(&thread_current()->spt); //2
 
 	/* 파싱하기 */
 	int token_count = 0;
@@ -731,17 +732,13 @@ lazy_load_segment(struct page *page, void *aux)
 	if (page == NULL){
 		return false;
 	}
-
-	
 	/* Load this page. */
 	if ((file_read_at(file,page->frame->kva,page_read_bytes,ofs)) != (int)page_read_bytes)
 	{
-		// printf("ddddddddddddd lazt_FAlse\n\n");
 		vm_dealloc_page(page);
 		return false;
 	}
-	// printf("ddddddddddddd lazt_True\n\n");
-	memset((page->frame->kva)+page_read_bytes, 0, page_zero_bytes);
+	memset((page->frame->kva)+page_read_bytes, 0, page_zero_bytes); // 기록 - 여기 수정
 	/* Add the page to the process's address space. */
 	free(aux);
 	return true;
@@ -787,7 +784,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 		file_info->file = file;
 		file_info->page_read_bytes = page_read_bytes;
 		file_info->page_zero_bytes = page_zero_bytes;
-		file_info->ofs = ofs;
+		file_info->ofs = ofs; 
 
 		// void *aux = file_info;
 		if (!vm_alloc_page_with_initializer(VM_ANON, upage,
@@ -812,10 +809,10 @@ setup_stack(struct intr_frame *if_)
 	bool success = false;
 	void *stack_bottom = (void *)(((uint8_t *)USER_STACK) - PGSIZE);
 
-	if(!(vm_alloc_page(VM_ANON | VM_MARKER_0,stack_bottom,true))) 
+	if(!(vm_alloc_page(VM_ANON | VM_MARKER_0,stack_bottom,true)))  // 혜진 수정 - type  비트연산 페이지 초기화
 		return success;
 		
-	success = vm_claim_page(stack_bottom);
+	success = vm_claim_page(stack_bottom); // 첫번째 페이지 할당
 	if (success)
 		if_->rsp = USER_STACK;	
 	

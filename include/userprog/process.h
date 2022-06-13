@@ -11,6 +11,10 @@ void process_exit(void);
 void process_activate(struct thread *next);
 void argument_stack(int argc, char **argv, struct intr_frame *if_);
 
+
+static bool lazy_load_segment(struct page *page, void *aux);
+
+
 // file descriptor
 int add_file_to_fdt(struct file *file);
 struct file *process_get_file(int fd);
