@@ -15,6 +15,8 @@
 #include "kernel/stdio.h"
 #include "threads/palloc.h"
 
+#include "vm/vm.h"
+
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -105,11 +107,8 @@ void syscall_handler(struct intr_frame *f UNUSED)
    유저 영역을 벗어난 영역일 경우 프로세스 종료(exit(-1)) */
 void check_address(const uint64_t *addr)
 {
-	if (addr = NULL || !(is_user_vaddr(addr)) ||
-			   pml4_get_page(thread_current()->pml4, addr) == NULL)
-	{
+	if (addr = NULL || !(is_user_vaddr(addr)) || spt_find_page(&thread_current()->spt,addr)  == NULL)
 		exit(-1);
-	}
 }
 
 /* PintOS를 종료시킨다. */

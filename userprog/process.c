@@ -261,6 +261,9 @@ int process_exec(void *f_name) /* 프로세스 실행 - 실행하려는 바이�
 
 	/* We first kill the current context */
 	process_cleanup();
+
+	/* key : process_cleanup에서 process_cleanup()에서 supplemental_page_table_kill을 해주기 때문에
+	spt init을 다시 해줘야한다. - hash table 재할당*/
 	supplemental_page_table_init(&thread_current()->spt); //2
 
 	/* 파싱하기 */
@@ -740,7 +743,7 @@ lazy_load_segment(struct page *page, void *aux)
 	}
 	memset((page->frame->kva)+page_read_bytes, 0, page_zero_bytes); // 기록 - 여기 수정
 	/* Add the page to the process's address space. */
-	free(aux);
+	// free(aux); fork_read에서 터짐
 	return true;
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
@@ -784,7 +787,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 		file_info->file = file;
 		file_info->page_read_bytes = page_read_bytes;
 		file_info->page_zero_bytes = page_zero_bytes;
-		file_info->ofs = ofs; 
+		file_info->ofs = ofs; //key : 페이지 마다 파일을 찾아야하니까 ofs도 갱신해서 저장해주기!!!!!!
 
 		// void *aux = file_info;
 		if (!vm_alloc_page_with_initializer(VM_ANON, upage,
@@ -801,7 +804,9 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 	return true;
 }
 
-/* Create a PAGE of stack at the USER_STACK. Return true on success. */
+/* Create a PAGE of stack at the USER_STACK. Return true on success.
+	가상 메모리의 스택부분을 초기화 하는 함수
+ */
 static bool
 setup_stack(struct intr_frame *if_)
 {
