@@ -66,9 +66,12 @@ uninit_initialize (struct page *page, void *kva) {
  * PAGE will be freed by the caller. */
 static void
 uninit_destroy (struct page *page) {
-	// struct uninit_page *uninit UNUSED = &page->uninit;
-	// struct file_info *file_info =  &page->uninit.aux;
+	struct uninit_page *uninit UNUSED = &page->uninit;
+	struct file_info *file_info;
+	if (VM_TYPE(uninit->type) == VM_ANON){
+		file_info = (struct file_info *)uninit->aux;
+		free(file_info);
+	}
 	// /* TODO: Fill this function.
 	//  * TODO: If you don't have anything to do, just return. */
-	// free(file_info);
 }
