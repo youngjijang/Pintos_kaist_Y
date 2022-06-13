@@ -291,10 +291,11 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
 		switch (VM_TYPE(type))
 		{
 		case VM_UNINIT :
+			//lazy load가 되기 위해 기다리는 페이지 만들기
 			vm_alloc_page_with_initializer(type, addr, writable, p->uninit.init, p->uninit.aux);
 			break;
 		case VM_ANON :
-			//둘이 먼차이? 
+			//setup_stack 과 비슷하게 처리 
 			if(!(vm_alloc_page(type,addr,writable)))
 				return false;
 			n_p = spt_find_page(dst,addr);
@@ -320,6 +321,7 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)
 {
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage. */
+	hash_destroy(&spt->spt_hash, page_destroy);///
 }
 
 /* Returns a hash value for page p.
@@ -341,4 +343,13 @@ bool page_less(const struct hash_elem *a_,
 	const struct page *b = hash_entry(b_, struct page, hash_elem);
 
 	return a->va < b->va;
+}
+
+/*
+	hash_destroy()에 두 번째 인자로 전달할 함수
+	hash_elem로 page를 찾아 page를 destroy
+*/
+void *page_destroy(struct hash_elem *h_elem, void *aux UNUSED){
+	struct page *p = hash_entry(h_elem, struct page, hash_elem);
+	vm_dealloc_page(p);
 }

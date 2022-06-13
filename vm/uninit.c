@@ -11,6 +11,7 @@
 #include "vm/vm.h"
 #include "vm/uninit.h"
 
+
 static bool uninit_initialize (struct page *page, void *kva);
 static void uninit_destroy (struct page *page);
 
@@ -54,10 +55,6 @@ uninit_initialize (struct page *page, void *kva) {
 	vm_initializer *init = uninit->init;
 	void *aux = uninit->aux;
 
-	// struct file_info imfofile {
-	// 	.offset = ofs
-	// }
-
 	/* TODO: You may need to fix this function. */
 	return uninit->page_initializer (page, uninit->type, kva) &&
 		(init ? init (page, aux) : true);
@@ -69,7 +66,9 @@ uninit_initialize (struct page *page, void *kva) {
  * PAGE will be freed by the caller. */
 static void
 uninit_destroy (struct page *page) {
-	struct uninit_page *uninit UNUSED = &page->uninit;
-	/* TODO: Fill this function.
-	 * TODO: If you don't have anything to do, just return. */
+	// struct uninit_page *uninit UNUSED = &page->uninit;
+	// struct file_info *file_info =  &page->uninit.aux;
+	// /* TODO: Fill this function.
+	//  * TODO: If you don't have anything to do, just return. */
+	// free(file_info);
 }
