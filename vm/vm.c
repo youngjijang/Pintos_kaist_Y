@@ -189,6 +189,11 @@ vm_get_frame(void)
 static void
 vm_stack_growth(void *addr UNUSED)
 {
+	// printf("들어온다?????????????\n\n");
+	void *stack_bottom = pg_round_down(addr);
+	vm_alloc_page(VM_ANON | VM_MARKER_0,stack_bottom,true);
+	vm_claim_page(stack_bottom);
+	// // exit(-1);
 }
 
 /* Handle the fault on write_protected page */
@@ -201,6 +206,9 @@ vm_handle_wp(struct page *page UNUSED)
 page fault 발생시 불림
  유효한 페이지폴트인지 확인 (유효한 page fault == 잘못된 접근)
  만약 유효한 페이지폴트가 아니라면  페이지에 필요한 내용을 불러오고 유저 프로그램으로 제어를 넘겨주어야 한다. 
+
+ 스택 증가를 식별한다. 식별 후 vm_stack_growth를 호출하여 스택을 증가ㅅ시켜야한디ㅏ. 
+ 스택 성장에 유효한 경우인지 확인 -> 스택 증가로 결함을 처리할 수 있음을 확인한 경우 결함이 있는 주소로 vm_stack_growth 
 */
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 						 bool user UNUSED, bool write UNUSED, bool not_present UNUSED)
@@ -211,9 +219,14 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	// puts("모르겠는데?");
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
-	if (page && not_present){ //수정 - not_present 추가
+	if (page && not_present){ //수정 - not_present 추가 
 		return vm_do_claim_page(page);
-	}else {
+	}
+	else if ( not_present && write && (f->rsp-8 == addr)){
+		vm_stack_growth(addr);
+		return true;
+	}
+	else {
 		return false;
 	}
 	
