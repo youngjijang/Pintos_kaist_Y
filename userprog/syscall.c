@@ -17,6 +17,9 @@
 
 #include "vm/vm.h"
 
+
+#define PAGE_SIZE 4096
+
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -84,11 +87,11 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		f->R.rax = filesize(f->R.rdi);
 		break;
 	case SYS_READ: /* Read from a file. */
-		check_valid_buffer(f->R.rsi, f->R.rdx,1);
+		// check_valid_buffer(f->R.rsi, f->R.rdx,1); //file에서 buffer로.. buffer의 writable??
 		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_WRITE: /* Write to a file. */
-		check_valid_buffer(f->R.rsi, f->R.rdx,0);
+		// check_valid_buffer(f->R.rsi, f->R.rdx,0); //buffer에서 file로
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_SEEK: /* Change position in a file. */
@@ -99,6 +102,12 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		break;
 	case SYS_CLOSE: /* Close a file. */
 		close(f->R.rdi);
+		break;
+	case SYS_MMAP: /* mmap 주소값 리턴 */
+		f->R.rax = mmap(f->R.rdi, f->R.rsi, f->R.rdx,f->R.r10,f->R.r8);
+		break;
+	case SYS_MUNMAP: /* munmap */
+		munmap(f->R.rdi);
 		break;
 	default:
 		exit(-1);
@@ -228,7 +237,7 @@ int filesize(int fd)
 
 int read(int fd, void *buffer, unsigned size)
 {
-	check_address(buffer);
+	check_valid_buffer( buffer, size, 1);
 	lock_acquire(&file_lock);
 
 	int read_result;
@@ -269,7 +278,7 @@ int read(int fd, void *buffer, unsigned size)
 
 int write(int fd, const void *buffer, unsigned size)
 {
-	check_address(buffer);
+	check_valid_buffer(buffer, size, 0); //buffer에서 file로
 	lock_acquire(&file_lock);
 
 	int write_result;
@@ -349,10 +358,44 @@ void check_valid_buffer(void *buffer, unsigned size, bool to_write)
 	/* 버퍼 내의 시작부터 끝까지의 각 주소를 모두 check_address*/
 	for (int i = 0; i < size; i++)
 	{
+		// if (!(USER_STACK - 0x100000 <= (buffer + i) && (buffer + i) <= USER_STACK))
+		//  	exit(-1);
 		struct page *page = check_address(buffer + i);
-		// printf("buffer : %p  @@@ page : %p @@@ page->writable : %d\n\n",buffer+i,page->va,page->writable);
+		// printf("write : %d buffer : %p  @@@ page : %p @@@ page->writable : %d\n\n",to_write, buffer+i,page->va,page->writable);
 		/* write 시스템 콜을 호출했는데 이 페이지가 쓰기가 허용된 페이지가 아닌 경우 */
 		if (to_write == true && page->writable == false)
 			exit(-1);
 	}
+}
+
+/*
+	메모리 매핑된 파일에 대한 시스템 호출
+	vm 시스템은 mmap영역에서 페이지를 느리게 로드하고 mmaped 파일 자체를 매핑을 위한 백업 저장소로 사용한다.
+	do_mmap 및 do_munmap을 사용하여 구현
+*/
+
+/*
+	요구페이징에 의해 파일 데이터를 메모리에 로드
+
+	전체 파일은 addr에서 시작하는 연속적인 가상 페이지에 매핑된다. 
+	파일 길이가 PGSIZE의 배수가 아니면 매핑된 최종 페이지의 일부 바이트가 파일 끝을 넘어 "삐져나옵니다".
+	페이지에 오류가 발생하면 이 바이트를 0으로 설정하고 페이지를 디스크에 다시 쓸 때 버립니다. 
+	성공하면 이 함수는 파일이 매핑된 가상 주소를 반환, 실패하면 NULL을 반환
+*/
+void *mmap (void *addr, size_t length, int writable, int fd, off_t offset){
+
+	check_address(addr);
+	if (length <= 0 || offset % PAGE_SIZE != 0 || fd < 2)
+		return NULL;
+	struct file *file = process_get_file(fd);
+	file_reopen(file);//mmap이 lazy하게 load되기 전에 file이 close되었을 경우
+	do_mmap(addr,length,writable,file,offset);
+}
+
+/*
+	mmap에 대한 이전 호출에서 반환된 가상 주소여야 하는 지정된 주소 범위에 대한 매핑을 해제합니다.
+	파일 매핑 제거
+*/
+void munmap (void *addr){
+	// do_munmap(addr);
 }

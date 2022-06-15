@@ -277,6 +277,7 @@ vm_do_claim_page(struct page *page)
 	page->frame = frame;
 
 	pml4_set_page(thread_current()->pml4,page->va,frame->kva,page->writable);
+	// 페이지 테이블에 물리 주소와 가상주소를 맵핑 시켜주는 함수(install_page)
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
 	return swap_in(page, frame->kva); 
 }

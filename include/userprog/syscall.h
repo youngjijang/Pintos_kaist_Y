@@ -28,5 +28,7 @@ int add_file_to_fdt(struct file *file);
 /* ---------------------------------------------------------- */
 
 void check_valid_buffer (void *buffer, unsigned size, bool to_write);
+void *mmap (void *addr, size_t length, int writable, int fd, off_t offset);
+void munmap (void *addr);
 
 #endif /* userprog/syscall.h */

@@ -54,6 +54,7 @@ struct page {
 	struct hash_elem hash_elem; /* 추가 - Hash table element. */
 	bool writable; //쓰기 권한 추가?? pml4_set_page 때 사용
 
+
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
 	union {
@@ -144,5 +145,6 @@ struct file_info
 	size_t page_zero_bytes;
 	//bool is_loaded;
 };
+
 
 #endif  /* VM_VM_H */

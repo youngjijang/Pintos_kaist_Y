@@ -136,7 +136,8 @@ struct thread
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
 	void *stack_bottom;
-	
+	struct list mmap_list;
+
 #endif
 	struct intr_frame tf; /* Information for switching */
 	unsigned magic;		  /* Detects stack overflow. */
