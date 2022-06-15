@@ -18,7 +18,6 @@
 #include "vm/vm.h"
 
 
-#define PAGE_SIZE 4096
 
 /* System call.
  *
@@ -388,8 +387,10 @@ void *mmap (void *addr, size_t length, int writable, int fd, off_t offset){
 	if (length <= 0 || offset % PAGE_SIZE != 0 || fd < 2)
 		return NULL;
 	struct file *file = process_get_file(fd);
-	file_reopen(file);//mmap이 lazy하게 load되기 전에 file이 close되었을 경우
-	do_mmap(addr,length,writable,file,offset);
+	if (file == NULL)
+		return NULL;
+	file_reopen(file);//mmap이 lazy하게 load되기 전에 file이 close되었을 경우 ( mmap-close 테스트 케이스)
+	return do_mmap(addr,length,writable,file,offset);
 }
 
 /*
@@ -397,5 +398,6 @@ void *mmap (void *addr, size_t length, int writable, int fd, off_t offset){
 	파일 매핑 제거
 */
 void munmap (void *addr){
-	// do_munmap(addr);
+	check_address(addr);
+	do_munmap(addr);
 }

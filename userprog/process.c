@@ -743,7 +743,7 @@ lazy_load_segment(struct page *page, void *aux)
 	}
 	memset((page->frame->kva)+page_read_bytes, 0, page_zero_bytes); // 기록 - 여기 수정
 	/* Add the page to the process's address space. */
-	// free(aux); fork_read에서 터짐
+	free(aux);// fork_read에서 터짐
 	return true;
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
