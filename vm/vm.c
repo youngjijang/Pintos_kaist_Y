@@ -189,10 +189,10 @@ vm_get_frame(void)
 static void
 vm_stack_growth(void *addr UNUSED)
 {
-	// printf("들어온다?????????????\n\n");
-	void *stack_bottom = pg_round_down(addr);
-	vm_alloc_page(VM_ANON | VM_MARKER_0,stack_bottom,true);
-	vm_claim_page(stack_bottom);
+	// printf("들어온다????????????? addr : %p\n\n", addr);
+	vm_alloc_page(VM_ANON | VM_MARKER_0,addr,true);
+	vm_claim_page(addr);
+	thread_current()->stack_bottom = addr;
 	// // exit(-1);
 }
 
@@ -219,14 +219,19 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	// puts("모르겠는데?");
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
+	void* stack_bottom = (void *)(((uint8_t *)thread_current()->stack_bottom) - PGSIZE);
+	// printf("rsp : %p\n adr: %p\n",f->rsp,rsp);
 	if (page && not_present){ //수정 - not_present 추가 
+		// printf("lazy\n");
 		return vm_do_claim_page(page);
 	}
-	else if ( not_present && write && (f->rsp-8 == addr)){
-		vm_stack_growth(addr);
+	else if ( not_present && write && (f->rsp-8 == addr) && stack_bottom > USER_STACK - 0X100000){
+		// printf("grow\n");
+		vm_stack_growth(stack_bottom);
 		return true;
 	}
 	else {
+		// printf("실패\n\n");
 		return false;
 	}
 	
