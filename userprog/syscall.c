@@ -50,6 +50,7 @@ void syscall_init(void)
 /* The main system call interface */
 void syscall_handler(struct intr_frame *f UNUSED)
 {
+	// thread_current()->user_rsp = f->rsp;
 	switch (f->R.rax) /* rax : system call number */
 	{
 	/* Projects 2 and later.

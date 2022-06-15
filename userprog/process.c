@@ -813,13 +813,17 @@ setup_stack(struct intr_frame *if_)
 	// puts("here?");
 	bool success = false;
 	void *stack_bottom = (void *)(((uint8_t *)USER_STACK) - PGSIZE);
+	// printf("stack bottom : %p\n\n",stack_bottom);
 
 	if(!(vm_alloc_page(VM_ANON | VM_MARKER_0,stack_bottom,true)))  // 혜진 수정 - type  비트연산 페이지 초기화
 		return success;
 		
 	success = vm_claim_page(stack_bottom); // 첫번째 페이지 할당
-	if (success)
-		if_->rsp = USER_STACK;	
+	if (success){
+		if_->rsp = USER_STACK;
+		thread_current()->stack_bottom = stack_bottom;
+	}
+			
 	
 	/* TODO: Map the stack on stack_bottom and claim the page immediately.
 	 * TODO: If success, set the rsp accordingly.

@@ -5,6 +5,8 @@
 #include "threads/palloc.h"
 #include "kernel/hash.h"
 
+#define STACK_SIZE 0Xf4240
+
 enum vm_type {
 	/* page not initialized */
 	VM_UNINIT = 0,
