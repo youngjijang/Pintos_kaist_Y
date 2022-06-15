@@ -190,9 +190,11 @@ static void
 vm_stack_growth(void *addr UNUSED)
 {
 	// printf("들어온다????????????? addr : %p\n\n", addr);
-	vm_alloc_page(VM_ANON | VM_MARKER_0,addr,true);
-	vm_claim_page(addr);
-	thread_current()->stack_bottom = addr;
+	if(vm_alloc_page(VM_ANON | VM_MARKER_0,addr,true)){
+		vm_claim_page(addr);
+		thread_current()->stack_bottom = addr;
+	}
+	
 	// // exit(-1);
 }
 

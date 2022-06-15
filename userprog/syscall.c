@@ -84,9 +84,11 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		f->R.rax = filesize(f->R.rdi);
 		break;
 	case SYS_READ: /* Read from a file. */
+		check_valid_buffer(f->R.rsi, f->R.rdx,1);
 		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_WRITE: /* Write to a file. */
+		check_valid_buffer(f->R.rsi, f->R.rdx,0);
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_SEEK: /* Change position in a file. */
@@ -106,10 +108,12 @@ void syscall_handler(struct intr_frame *f UNUSED)
 
 /* 주소 값이 유저 영역에서 사용하는 주소 값인지 확인 하는 함수
    유저 영역을 벗어난 영역일 경우 프로세스 종료(exit(-1)) */
-void check_address(const uint64_t *addr)
+void* check_address(const uint64_t *addr)
 {
-	if (addr = NULL || !(is_user_vaddr(addr)) || spt_find_page(&thread_current()->spt,addr)  == NULL)
+	struct page* page =  spt_find_page(&thread_current()->spt,addr);
+	if (addr = NULL || !(is_user_vaddr(addr)) || page == NULL)
 		exit(-1);
+	return page;
 }
 
 /* PintOS를 종료시킨다. */
@@ -333,4 +337,22 @@ void close(int fd)
 		return;
 	}
 	process_close_file(fd);
+}
+
+/*
+	Buffer를 사용하는 read() system call의 경우 buffer의 주소가
+	유효한 가상주소인지 아닌지 검사
+*/
+
+void check_valid_buffer(void *buffer, unsigned size, bool to_write)
+{
+	/* 버퍼 내의 시작부터 끝까지의 각 주소를 모두 check_address*/
+	for (int i = 0; i < size; i++)
+	{
+		struct page *page = check_address(buffer + i);
+		// printf("buffer : %p  @@@ page : %p @@@ page->writable : %d\n\n",buffer+i,page->va,page->writable);
+		/* write 시스템 콜을 호출했는데 이 페이지가 쓰기가 허용된 페이지가 아닌 경우 */
+		if (to_write == true && page->writable == false)
+			exit(-1);
+	}
 }
