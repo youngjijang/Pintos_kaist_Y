@@ -5,7 +5,10 @@
 #include "vm/inspect.h"
 #include "threads/mmu.h"
 #include "vm/uninit.h"
+#include "vm/file.h"
 // #include "userprog/process.h"
+
+struct mmap_file;
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -377,4 +380,27 @@ bool page_less(const struct hash_elem *a_,
 void *page_destroy(struct hash_elem *h_elem, void *aux UNUSED){
 	struct page *p = hash_entry(h_elem, struct page, hash_elem);
 	vm_dealloc_page(p);
+}
+
+
+//mapped_hash
+/* Returns a hash value for page p.
+addr을 키로 사용하는 해시함수 */
+unsigned
+mapped_hash(const struct hash_elem *f_, void *aux UNUSED)
+{
+	const struct mmap_file *mpfile = hash_entry(f_, struct mmap_file, hash_elem);
+	return hash_bytes(&mpfile->va, sizeof mpfile->va);
+}
+
+/* Returns true if page a precedes page b. 
+addr을 키로 사용하는 비교함수
+*/
+bool mapped_less(const struct hash_elem *a_,
+			   const struct hash_elem *b_, void *aux UNUSED)
+{
+	const struct mmap_file *a = hash_entry(a_, struct mmap_file, hash_elem);
+	const struct mmap_file *b = hash_entry(b_, struct mmap_file, hash_elem);
+
+	return a->va < b->va;
 }

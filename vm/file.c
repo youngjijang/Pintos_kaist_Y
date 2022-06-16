@@ -18,7 +18,7 @@ static const struct page_operations file_ops = {
 /* The initializer of file vm */
 void
 vm_file_init (void) {
-	list_init(&thread_current()->mmap_list);
+	hash_init(&thread_current()->mmap_hash,mapped_hash,mapped_less,NULL);
 }
 
 /* Initialize the file backed page */
@@ -83,13 +83,15 @@ do_mmap (void *addr, size_t length, int writable,struct file *file, off_t offset
 		addr += PAGE_SIZE;
 		offset += page_read_bytes;
 	}
-	list_push_back(&curr->mmap_list,&mmap_file->elem);
-	return mmap_file->mapid = mmap_file;
+	struct hash_elem *e = hash_insert(&curr->mmap_hash,&mmap_file->hash_elem);
+	ASSERT(e!=NULL);
+	return mmap_file->va = mmap_file;
 }
 
 /* Do the munmap */
 void
 do_munmap (void *addr) {
+	
 }
 
 

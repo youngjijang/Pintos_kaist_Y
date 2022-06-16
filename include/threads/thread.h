@@ -132,13 +132,13 @@ struct thread
 	uint64_t *pml4; /* Page map level 4 */
 /* ---------------------------------------------------------- */
 // #endif
-#ifdef VM
+// #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
 	void *stack_bottom;
-	struct list mmap_list;
+	struct hash mmap_hash;
 
-#endif
+// #endif
 	struct intr_frame tf; /* Information for switching */
 	unsigned magic;		  /* Detects stack overflow. */
 };

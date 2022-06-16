@@ -132,6 +132,9 @@ unsigned page_hash (const struct hash_elem *p_, void *aux UNUSED);
 bool page_less (const struct hash_elem *a_,
            const struct hash_elem *b_, void *aux UNUSED);
 
+unsigned mapped_hash(const struct hash_elem *f_, void *aux UNUSED);
+bool mapped_less(const struct hash_elem *a_, const struct hash_elem *b_, void *aux UNUSED);
+
 void *page_destroy(struct hash_elem *h_elem, void *aux UNUSED);
 
 struct list frame_table;

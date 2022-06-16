@@ -2,6 +2,7 @@
 #define VM_FILE_H
 #include "filesys/file.h"
 #include "vm/vm.h"
+#include "kernel/hash.h"
 
 #define PAGE_SIZE 4096
 
@@ -12,11 +13,12 @@ struct file_page {
 	struct list_elem mmap_elem;
 };
 
+/*mmap_file*/
 struct mmap_file {
-	int mapid; //mmap() 성공시 리턴된 mapping id
+	void *va; //mmap() 성공시 리턴된 mapping id
 	struct file* file; //매핑되는 파일 오브젝트
-	struct list_elem elem; //mmap_file들의 리스트 연결을 위한 구조체
-	struct list page_list; //  mmap_file에 해당하는 모든 page들의 리스트
+	struct hash_elem hash_elem; //mmap_file들의 리스트 연결을 위한 구조체
+	struct list page_list; // mmap_file에 해당하는 모든 page들의 리스트
 };
 
 void vm_file_init (void);

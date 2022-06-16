@@ -357,8 +357,6 @@ void check_valid_buffer(void *buffer, unsigned size, bool to_write)
 	/* 버퍼 내의 시작부터 끝까지의 각 주소를 모두 check_address*/
 	for (int i = 0; i < size; i++)
 	{
-		// if (!(USER_STACK - 0x100000 <= (buffer + i) && (buffer + i) <= USER_STACK))
-		//  	exit(-1);
 		struct page *page = check_address(buffer + i);
 		// printf("write : %d buffer : %p  @@@ page : %p @@@ page->writable : %d\n\n",to_write, buffer+i,page->va,page->writable);
 		/* write 시스템 콜을 호출했는데 이 페이지가 쓰기가 허용된 페이지가 아닌 경우 */
