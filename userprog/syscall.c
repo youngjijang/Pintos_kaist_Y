@@ -385,7 +385,8 @@ void check_valid_buffer(void *buffer, unsigned size, bool to_write)
 void *mmap (void *addr, size_t length, int writable, int fd, off_t offset){
 
 	// check_address(addr);
-	if (length <= 0 || offset % PAGE_SIZE != 0 || fd < 2)
+
+	if (!(is_user_vaddr(addr)) || addr == 0 || length <= 0 || offset % PAGE_SIZE != 0 || fd < 2 || (length > KERN_BASE - USER_STACK))
 		return NULL;
 	struct file *file = process_get_file(fd);
 	if (file == NULL)
@@ -400,5 +401,7 @@ void *mmap (void *addr, size_t length, int writable, int fd, off_t offset){
 */
 void munmap (void *addr){
 	// check_address(addr);
+	if (addr == 0)
+		return;
 	do_munmap(addr);
 }

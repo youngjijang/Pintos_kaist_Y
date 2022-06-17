@@ -228,39 +228,25 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 {
 
 	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
-	struct page *page = NULL;
+	struct page *page = spt_find_page(spt,addr);
 	// puts("모르겠는데?");
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
-	if (is_kernel_vaddr(addr))
-	{ // 유저 공간 페이지 폴트여야 한다.
+	void* stack_bottom = (void *)(((uint8_t *)thread_current()->stack_bottom) - PGSIZE);
+	// printf("rsp : %p\n adr: %p\n",f->rsp,rsp);
+	if (page && not_present){ //수정 - not_present 추가 
+		// printf("lazy\n");
+		return vm_do_claim_page(page);
+	}
+	else if ( not_present && write && (f->rsp-8 == addr) && stack_bottom > USER_STACK - 0X100000){
+		// printf("grow\n");
+		vm_stack_growth(stack_bottom);
+		return true;
+	}
+	else {
+		// printf("실패\n\n");
 		return false;
 	}
-	void *rsp_stack = is_kernel_vaddr(f->rsp) ? thread_current()->rsp_stack : f->rsp;
-
-	if (not_present)
-	{
-		/* 페이지의 Present bit이 0이면 -> 메모리 상에 존재하지 않으면 
-		메모리에 프레임을 올리고 프레임과 페이지를 매핑시켜준다. */
-		if (!vm_claim_page(addr))
-		/* spt에 없다. 페이지가 없다.spt_find_page가 실패했을 때 */ 
-		{
-			// printf("스택\n");
-			if (rsp_stack - 8 <= addr && USER_STACK - 0x100000 <= addr && addr <= USER_STACK)
-			{
-				/* 2. Page fault 발생 주소가 유저 스택 내에 있고, 스택 포인터보다 8바이트 밑에 있지 않으면 */
-				vm_stack_growth(thread_current()->stack_bottom - PGSIZE);
-				return true;
-			}
-			return false;
-		}
-		else{
-			// printf("매핑\n");
-			return true;
-		}
-			
-	}
-	return false;
 }
 
 /* Free the page.

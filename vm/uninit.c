@@ -42,7 +42,6 @@ uninit_new (struct page *page, void *va, vm_initializer *init,
 			.page_initializer = initializer,
 		}
 	};
-	// printf("111swapppppppppp  %p\n",page->uninit.init);
 	// printf("도영아 봤니\n\n");
 }
 

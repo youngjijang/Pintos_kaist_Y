@@ -81,8 +81,8 @@ do_mmap (void *addr, size_t length, int writable,struct file *file, off_t offset
 			return NULL;
 
 		struct page *p = spt_find_page(&curr->spt,addr);
-		// printf("page inin : %p\n\n",p);
-		// printf("@@page : %d ofs : %d read byte : %d zero : %d\n\n",p,offset,page_read_bytes,page_zero_bytes);
+		// printf("page : %d\n\n",p);
+		// printf("@@file : %d ofs : %d read byte : %d zero : %d\n\n",f->file,f->ofs,page_read_bytes,page_zero_bytes);
 		// list_push_back (&mmap_file->page_list, &p->file.mmap_elem);
 		 
 		/* Advance. */
@@ -103,20 +103,19 @@ do_munmap (void *addr) {
 	// printf("들어온다다아아아아아아아아아ㅏ아아아아\n\n");
 	while(true){
 		struct page* page = spt_find_page(&thread_current()->spt, addr);
-
+		// printf("page : %d\n\n",page);
 		if (page == NULL)
-			return NULL;
+			break;
 		
 		struct file_info *f_info = (struct file_info *)page->uninit.aux;
-
 		/* 수정된 페이지(더티 비트 1)는 파일에 업데이트 해 놓는다. 
 		   그리고 더티 비트를 0으로 만들어둔다. */
+
 		if (pml4_is_dirty(thread_current()->pml4, page->va)){
-			file_write_at(f_info->file, addr, 
-				f_info->page_read_bytes, f_info->ofs);
+			file_write_at(f_info->file, addr, f_info->page_read_bytes, f_info->ofs);
 			pml4_set_dirty(thread_current()->pml4, page->va, 0);
 		}
-
+		
 		/* present bit을 0으로 만든다. */
 		pml4_clear_page(thread_current()->pml4, page->va);
 		addr += PAGE_SIZE;
@@ -133,7 +132,7 @@ lazy_load_file(struct page *page, void *aux)
 	off_t ofs = file_info->ofs;
 	size_t page_read_bytes = file_info->page_read_bytes;
 	size_t page_zero_bytes = PAGE_SIZE - page_read_bytes;
-	// printf("page : %d ofs : %d read byte : %d zero : %d\n\n",page,ofs,page_read_bytes,page_zero_bytes);
+	// printf("로드....page : %d ofs : %d read byte : %d zero : %d\n\n",file,ofs,page_read_bytes,page_zero_bytes);
 	if (page == NULL){
 		return false;
 	}
@@ -143,13 +142,14 @@ lazy_load_file(struct page *page, void *aux)
 	// (file_read_at(file,page->frame->kva,page_read_bytes,ofs))
 	if (file_read(file, page->frame->kva, page_read_bytes) != (int)page_read_bytes)
 	{	
+
 		vm_dealloc_page(page);
 		return false;
 	}
 	// printf("안녕여여여여여여ㅕ여영\n\n");
 	memset((page->frame->kva)+page_read_bytes, 0, page_zero_bytes); // 기록 - 여기 수정
 	/* Add the page to the process's address space. */
-	free(aux); //fork_read에서 터짐
+	// free(aux); //fork_read에서 터짐
 	
 	return true;
 }
