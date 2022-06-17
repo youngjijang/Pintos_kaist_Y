@@ -24,7 +24,7 @@ void vm_init(void)
 	/* TODO: Your code goes here. */
 
 	//1번 - frame talble 추가
-	// list_init(&frame_table);
+	list_init(&frame_table);
 	list_init(&swap_table);
 }
 
@@ -187,7 +187,7 @@ vm_get_frame(void)
 	if(frame->kva == NULL)
 		PANIC("todo");
 		
-	// list_push_back(&frame_table,&frame->frame_elem);
+	list_push_back(&frame_table,&frame->frame_elem);
 
 	frame->page = NULL; //추가
 	

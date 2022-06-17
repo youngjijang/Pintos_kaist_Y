@@ -47,6 +47,12 @@ file_backed_swap_out (struct page *page) {
 static void
 file_backed_destroy (struct page *page) {
 	struct file_page *file_page UNUSED = &page->file;
+
+	struct file_info *f_info = (struct file_info *)page->uninit.aux;
+	if (pml4_is_dirty(thread_current()->pml4, page->va)){
+		file_write_at(f_info->file, page->va, f_info->page_read_bytes, f_info->ofs);
+		pml4_set_dirty(thread_current()->pml4, page->va, 0);
+	}
 }
 
 /* Do the mmap 
@@ -86,7 +92,7 @@ do_mmap (void *addr, size_t length, int writable,struct file *file, off_t offset
 		if (p == NULL)
 			return NULL;
 			
-		// list_push_back (&mmap_file->page_list, &p->file.mmap_elem);
+		// list_push_back (&mmap_file->page_list, &p->mmap_elem);
 		/* Advance. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
@@ -122,6 +128,7 @@ do_munmap (void *addr) {
 		pml4_clear_page(thread_current()->pml4, page->va);
 		addr += PAGE_SIZE;
 	}
+
 }
 
 

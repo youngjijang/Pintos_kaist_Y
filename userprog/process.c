@@ -339,10 +339,12 @@ void process_exit(void)
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+
 	for (int i = 0; i < FD_LIMIT; i++)
-	{
+	{	
 		close(i);
 	}
+	
 	file_close(curr->running_file);				/* running file 닫기 */
 	palloc_free_multiple(curr->fdt, FDT_PAGES); /* fd_table 반환 */
 
