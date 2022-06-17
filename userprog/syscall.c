@@ -52,6 +52,9 @@ void syscall_init(void)
 /* The main system call interface */
 void syscall_handler(struct intr_frame *f UNUSED)
 {
+	#ifdef VM
+		thread_current()->rsp_stack = f->rsp; // syscall을 호출한 유저 프로그램의 유저 스택 포인터
+	#endif
 	// thread_current()->user_rsp = f->rsp;
 	switch (f->R.rax) /* rax : system call number */
 	{
@@ -381,13 +384,13 @@ void check_valid_buffer(void *buffer, unsigned size, bool to_write)
 */
 void *mmap (void *addr, size_t length, int writable, int fd, off_t offset){
 
-	check_address(addr);
+	// check_address(addr);
 	if (length <= 0 || offset % PAGE_SIZE != 0 || fd < 2)
 		return NULL;
 	struct file *file = process_get_file(fd);
 	if (file == NULL)
 		return NULL;
-	file_reopen(file);//mmap이 lazy하게 load되기 전에 file이 close되었을 경우 ( mmap-close 테스트 케이스)
+	// file_reopen(file);//mmap이 lazy하게 load되기 전에 file이 close되었을 경우 ( mmap-close 테스트 케이스)
 	return do_mmap(addr,length,writable,file,offset);
 }
 
@@ -396,6 +399,6 @@ void *mmap (void *addr, size_t length, int writable, int fd, off_t offset){
 	파일 매핑 제거
 */
 void munmap (void *addr){
-	check_address(addr);
+	// check_address(addr);
 	do_munmap(addr);
 }

@@ -6,7 +6,7 @@
 #include "threads/mmu.h"
 #include "vm/uninit.h"
 #include "vm/file.h"
-// #include "userprog/process.h"
+#include "userprog/process.h"
 
 struct mmap_file;
 
@@ -24,7 +24,7 @@ void vm_init(void)
 	/* TODO: Your code goes here. */
 
 	//1번 - frame talble 추가
-	list_init(&frame_table);
+	// list_init(&frame_table);
 	list_init(&swap_table);
 }
 
@@ -76,16 +76,24 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		/* TODO: Create the page, fetch the initialier according to the VM type,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
+		typedef bool (*initializeFunc)(struct page*, enum vm_type, void *);
+		initializeFunc initializer = NULL;
+
 		struct page* page = (struct page*)malloc(sizeof(struct page));
-		if (page == NULL){
-			return false;
+		switch(VM_TYPE(type)){
+			case VM_ANON:
+			// case VM_ANON|VM_MARKER_0:
+				initializer = anon_initializer;
+				break;
+			case VM_FILE:
+				initializer = file_backed_initializer;
+				break;
 		}
-		if (VM_TYPE(type) == VM_ANON){
-			uninit_new(page, upage, init, type, aux, anon_initializer); //type이 이게 맞나
-		}else if (VM_TYPE(type) == VM_FILE){
-			uninit_new(page, upage, init, type, aux, file_backed_initializer); 
-		}
+
+		uninit_new(page, upage, init, type, aux, initializer);
+
 		page->writable = writable;
+		// page->page_cnt = -1;
 		/* TODO: Insert the page into the spt. */
 		return spt_insert_page(spt,page);
 	}
@@ -179,7 +187,7 @@ vm_get_frame(void)
 	if(frame->kva == NULL)
 		PANIC("todo");
 		
-	list_push_back(&frame_table,&frame->frame_elem);
+	// list_push_back(&frame_table,&frame->frame_elem);
 
 	frame->page = NULL; //추가
 	
@@ -195,7 +203,7 @@ vm_stack_growth(void *addr UNUSED)
 	// printf("들어온다????????????? addr : %p\n\n", addr);
 	if(vm_alloc_page(VM_ANON | VM_MARKER_0,addr,true)){
 		vm_claim_page(addr);
-		thread_current()->stack_bottom = addr;
+		thread_current()->stack_bottom -= PGSIZE;
 	}
 	
 	// // exit(-1);
@@ -220,26 +228,39 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 {
 
 	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
-	struct page *page = spt_find_page(spt,addr);
+	struct page *page = NULL;
 	// puts("모르겠는데?");
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
-	void* stack_bottom = (void *)(((uint8_t *)thread_current()->stack_bottom) - PGSIZE);
-	// printf("rsp : %p\n adr: %p\n",f->rsp,rsp);
-	if (page && not_present){ //수정 - not_present 추가 
-		// printf("lazy\n");
-		return vm_do_claim_page(page);
-	}
-	else if ( not_present && write && (f->rsp-8 == addr) && stack_bottom > USER_STACK - 0X100000){
-		// printf("grow\n");
-		vm_stack_growth(stack_bottom);
-		return true;
-	}
-	else {
-		// printf("실패\n\n");
+	if (is_kernel_vaddr(addr))
+	{ // 유저 공간 페이지 폴트여야 한다.
 		return false;
 	}
-	
+	void *rsp_stack = is_kernel_vaddr(f->rsp) ? thread_current()->rsp_stack : f->rsp;
+
+	if (not_present)
+	{
+		/* 페이지의 Present bit이 0이면 -> 메모리 상에 존재하지 않으면 
+		메모리에 프레임을 올리고 프레임과 페이지를 매핑시켜준다. */
+		if (!vm_claim_page(addr))
+		/* spt에 없다. 페이지가 없다.spt_find_page가 실패했을 때 */ 
+		{
+			// printf("스택\n");
+			if (rsp_stack - 8 <= addr && USER_STACK - 0x100000 <= addr && addr <= USER_STACK)
+			{
+				/* 2. Page fault 발생 주소가 유저 스택 내에 있고, 스택 포인터보다 8바이트 밑에 있지 않으면 */
+				vm_stack_growth(thread_current()->stack_bottom - PGSIZE);
+				return true;
+			}
+			return false;
+		}
+		else{
+			// printf("매핑\n");
+			return true;
+		}
+			
+	}
+	return false;
 }
 
 /* Free the page.
@@ -258,6 +279,7 @@ void vm_dealloc_page(struct page *page)
 bool vm_claim_page(void *va UNUSED)
 {
 	/* TODO: Fill this function */
+	// printf("page fualt wwwwwww: %p\n",va);
 	struct page *page = spt_find_page(&thread_current()->spt,va);
 	if (page == NULL)
 		return false;
@@ -274,12 +296,15 @@ static bool
 vm_do_claim_page(struct page *page)
 {
 	struct frame *frame = vm_get_frame();
-
+	
 	/* Set links */
 	frame->page = page; 
 	page->frame = frame;
 
-	pml4_set_page(thread_current()->pml4,page->va,frame->kva,page->writable);
+	struct thread *t = thread_current();
+	if (!(pml4_get_page(t->pml4, page->va) == NULL && pml4_set_page(t->pml4, page->va, frame->kva, page->writable)))
+    	return false;
+	// printf("여기?????: page : %p //// %p\n",page, frame->kva);
 	// 페이지 테이블에 물리 주소와 가상주소를 맵핑 시켜주는 함수(install_page)
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
 	return swap_in(page, frame->kva); 
@@ -383,24 +408,24 @@ void *page_destroy(struct hash_elem *h_elem, void *aux UNUSED){
 }
 
 
-//mapped_hash
-/* Returns a hash value for page p.
-addr을 키로 사용하는 해시함수 */
-unsigned
-mapped_hash(const struct hash_elem *f_, void *aux UNUSED)
-{
-	const struct mmap_file *mpfile = hash_entry(f_, struct mmap_file, hash_elem);
-	return hash_bytes(&mpfile->va, sizeof mpfile->va);
-}
+// //mapped_hash
+// /* Returns a hash value for page p.
+// addr을 키로 사용하는 해시함수 */
+// unsigned
+// mapped_hash(const struct hash_elem *f_, void *aux UNUSED)
+// {
+// 	const struct mmap_file *mpfile = hash_entry(f_, struct mmap_file, hash_elem);
+// 	return hash_bytes(&mpfile->va, sizeof mpfile->va);
+// }
 
-/* Returns true if page a precedes page b. 
-addr을 키로 사용하는 비교함수
-*/
-bool mapped_less(const struct hash_elem *a_,
-			   const struct hash_elem *b_, void *aux UNUSED)
-{
-	const struct mmap_file *a = hash_entry(a_, struct mmap_file, hash_elem);
-	const struct mmap_file *b = hash_entry(b_, struct mmap_file, hash_elem);
+// /* Returns true if page a precedes page b. 
+// addr을 키로 사용하는 비교함수
+// */
+// bool mapped_less(const struct hash_elem *a_,
+// 			   const struct hash_elem *b_, void *aux UNUSED)
+// {
+// 	const struct mmap_file *a = hash_entry(a_, struct mmap_file, hash_elem);
+// 	const struct mmap_file *b = hash_entry(b_, struct mmap_file, hash_elem);
 
-	return a->va < b->va;
-}
+// 	return a->va < b->va;
+// }

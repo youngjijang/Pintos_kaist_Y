@@ -136,7 +136,9 @@ struct thread
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
 	void *stack_bottom;
+	void *rsp_stack;
 	struct hash mmap_hash;
+
 
 // #endif
 	struct intr_frame tf; /* Information for switching */

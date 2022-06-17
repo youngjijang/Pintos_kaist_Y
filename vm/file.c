@@ -1,6 +1,7 @@
 /* file.c: Implementation of memory backed file object (mmaped object). */
 
 #include "vm/vm.h"
+#include "../include/userprog/process.h"
 
 
 static bool file_backed_swap_in (struct page *page, void *kva);
@@ -18,7 +19,7 @@ static const struct page_operations file_ops = {
 /* The initializer of file vm */
 void
 vm_file_init (void) {
-	hash_init(&thread_current()->mmap_hash,mapped_hash,mapped_less,NULL);
+	// hash_init(&thread_current()->mmap_hash,mapped_hash,mapped_less,NULL);
 }
 
 /* Initialize the file backed page */
@@ -54,18 +55,22 @@ file_backed_destroy (struct page *page) {
 void *
 do_mmap (void *addr, size_t length, int writable,struct file *file, off_t offset) {
 
+	struct file *m_file = file_reopen(file);
+	// struct file *m_file = file_open(file);
 	struct thread* curr = thread_current();
 	struct mmap_file *mmap_file = (struct mmap_file *)malloc(sizeof(struct mmap_file));
+	void *addr_ = addr;
 	list_init(&mmap_file->page_list);
-	mmap_file->file = file;
-	while (length > 0)
-	{
-		size_t page_read_bytes = length < PAGE_SIZE ? length : PAGE_SIZE;
+	mmap_file->file = m_file;
+	size_t read_bytes = length > file_length(file) ? file_length(file) : length;
+  	size_t zero_bytes = PAGE_SIZE - read_bytes % PAGE_SIZE;
+	while (read_bytes > 0 || zero_bytes > 0) {
+		size_t page_read_bytes = read_bytes < PAGE_SIZE ? read_bytes : PAGE_SIZE;
 		size_t page_zero_bytes = PAGE_SIZE - page_read_bytes;
 
 		// printf("do_mmap\n");
 		struct file_info *file_info = (struct file_info *)malloc(sizeof(struct file_info));
-		file_info->file = file;
+		file_info->file = m_file;
 		file_info->page_read_bytes = page_read_bytes;
 		file_info->page_zero_bytes = page_zero_bytes;
 		file_info->ofs = offset; //key : 페이지 마다 파일을 찾아야하니까 ofs도 갱신해서 저장해주기!!!!!!
@@ -76,45 +81,75 @@ do_mmap (void *addr, size_t length, int writable,struct file *file, off_t offset
 			return NULL;
 
 		struct page *p = spt_find_page(&curr->spt,addr);
-		list_push_back (&mmap_file->page_list, &p->file.mmap_elem);
+		// printf("page inin : %p\n\n",p);
+		// printf("@@page : %d ofs : %d read byte : %d zero : %d\n\n",p,offset,page_read_bytes,page_zero_bytes);
+		// list_push_back (&mmap_file->page_list, &p->file.mmap_elem);
 		 
 		/* Advance. */
-		length -= page_read_bytes;
+		read_bytes -= page_read_bytes;
+		zero_bytes -= page_zero_bytes;
 		addr += PAGE_SIZE;
 		offset += page_read_bytes;
 	}
-	struct hash_elem *e = hash_insert(&curr->mmap_hash,&mmap_file->hash_elem);
-	ASSERT(e!=NULL);
-	return mmap_file->va = mmap_file;
+	// struct hash_elem *e = hash_insert(&curr->mmap_hash,&mmap_file->hash_elem);
+	// ASSERT(e!=NULL);
+	// printf("rrrrrrrrrrrr\n\n");
+	return addr_;
 }
 
 /* Do the munmap */
 void
 do_munmap (void *addr) {
-	
+	// printf("들어온다다아아아아아아아아아ㅏ아아아아\n\n");
+	while(true){
+		struct page* page = spt_find_page(&thread_current()->spt, addr);
+
+		if (page == NULL)
+			return NULL;
+		
+		struct file_info *f_info = (struct file_info *)page->uninit.aux;
+
+		/* 수정된 페이지(더티 비트 1)는 파일에 업데이트 해 놓는다. 
+		   그리고 더티 비트를 0으로 만들어둔다. */
+		if (pml4_is_dirty(thread_current()->pml4, page->va)){
+			file_write_at(f_info->file, addr, 
+				f_info->page_read_bytes, f_info->ofs);
+			pml4_set_dirty(thread_current()->pml4, page->va, 0);
+		}
+
+		/* present bit을 0으로 만든다. */
+		pml4_clear_page(thread_current()->pml4, page->va);
+		addr += PAGE_SIZE;
+	}
 }
 
 
 static bool
 lazy_load_file(struct page *page, void *aux)
 {
+	// printf("안녕여여여여여여ㅕ여영\n\n");
 	struct file_info *file_info = (struct file_info *)aux;
 	struct file *file = file_info->file;
 	off_t ofs = file_info->ofs;
 	size_t page_read_bytes = file_info->page_read_bytes;
 	size_t page_zero_bytes = PAGE_SIZE - page_read_bytes;
-
+	// printf("page : %d ofs : %d read byte : %d zero : %d\n\n",page,ofs,page_read_bytes,page_zero_bytes);
 	if (page == NULL){
 		return false;
 	}
 	/* Load this page. */
-	if ((file_read_at(file,page->frame->kva,page_read_bytes,ofs)) != (int)page_read_bytes)
-	{
+	file_seek(file, ofs);
+	// printf("됨\n");
+	// (file_read_at(file,page->frame->kva,page_read_bytes,ofs))
+	if (file_read(file, page->frame->kva, page_read_bytes) != (int)page_read_bytes)
+	{	
 		vm_dealloc_page(page);
 		return false;
 	}
+	// printf("안녕여여여여여여ㅕ여영\n\n");
 	memset((page->frame->kva)+page_read_bytes, 0, page_zero_bytes); // 기록 - 여기 수정
 	/* Add the page to the process's address space. */
 	free(aux); //fork_read에서 터짐
+	
 	return true;
 }

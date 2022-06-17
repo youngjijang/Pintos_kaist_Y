@@ -143,7 +143,7 @@ page_fault (struct intr_frame *f) {
 	user = (f->error_code & PF_U) != 0;
 
 	// exit(-1);
-
+	// printf("@@@@@@@@\n\n");
 #ifdef VM
 	/* For project 3 and later. */
 	if (vm_try_handle_fault (f, fault_addr, user, write, not_present)){

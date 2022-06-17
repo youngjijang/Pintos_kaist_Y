@@ -10,6 +10,7 @@
 
 #include "vm/vm.h"
 #include "vm/uninit.h"
+#include "vm/file.h"
 
 
 static bool uninit_initialize (struct page *page, void *kva);
@@ -29,7 +30,7 @@ uninit_new (struct page *page, void *va, vm_initializer *init,
 		enum vm_type type, void *aux,
 		bool (*initializer)(struct page *, enum vm_type, void *)) {
 	ASSERT (page != NULL);
-
+	// printf("111111here?? %p\n\n",init);
 	*page = (struct page) {
 		.operations = &uninit_ops,
 		.va = va,
@@ -41,6 +42,7 @@ uninit_new (struct page *page, void *va, vm_initializer *init,
 			.page_initializer = initializer,
 		}
 	};
+	// printf("111swapppppppppp  %p\n",page->uninit.init);
 	// printf("도영아 봤니\n\n");
 }
 
@@ -54,6 +56,8 @@ uninit_initialize (struct page *page, void *kva) {
 	/* Fetch first, page_initialize may overwrite the values */
 	vm_initializer *init = uninit->init;
 	void *aux = uninit->aux;
+	// printf("page outout : %p\n",page);
+	// printf("2222swapppppppppp  %p\n",init);
 
 	/* TODO: You may need to fix this function. */
 	return uninit->page_initializer (page, uninit->type, kva) &&
@@ -66,12 +70,12 @@ uninit_initialize (struct page *page, void *kva) {
  * PAGE will be freed by the caller. */
 static void
 uninit_destroy (struct page *page) {
-	struct uninit_page *uninit UNUSED = &page->uninit;
-	struct file_info *file_info;
-	if (VM_TYPE(uninit->type) == VM_ANON){
-		file_info = (struct file_info *)uninit->aux;
-		free(file_info);
-	}
+	// struct uninit_page *uninit UNUSED = &page->uninit;
+	// struct file_info *file_info;
+	// if (VM_TYPE(uninit->type) == VM_ANON){
+	// 	file_info = (struct file_info *)uninit->aux;
+	// 	free(file_info);
+	// }
 	// /* TODO: Fill this function.
 	//  * TODO: If you don't have anything to do, just return. */
 }
