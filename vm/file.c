@@ -83,8 +83,10 @@ do_mmap (void *addr, size_t length, int writable,struct file *file, off_t offset
 		struct page *p = spt_find_page(&curr->spt,addr);
 		// printf("page : %d\n\n",p);
 		// printf("@@file : %d ofs : %d read byte : %d zero : %d\n\n",f->file,f->ofs,page_read_bytes,page_zero_bytes);
+		if (p == NULL)
+			return NULL;
+			
 		// list_push_back (&mmap_file->page_list, &p->file.mmap_elem);
-		 
 		/* Advance. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
@@ -142,7 +144,6 @@ lazy_load_file(struct page *page, void *aux)
 	// (file_read_at(file,page->frame->kva,page_read_bytes,ofs))
 	if (file_read(file, page->frame->kva, page_read_bytes) != (int)page_read_bytes)
 	{	
-
 		vm_dealloc_page(page);
 		return false;
 	}

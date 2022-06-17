@@ -55,9 +55,7 @@ uninit_initialize (struct page *page, void *kva) {
 	/* Fetch first, page_initialize may overwrite the values */
 	vm_initializer *init = uninit->init;
 	void *aux = uninit->aux;
-	// printf("page outout : %p\n",page);
-	// printf("2222swapppppppppp  %p\n",init);
-
+	
 	/* TODO: You may need to fix this function. */
 	return uninit->page_initializer (page, uninit->type, kva) &&
 		(init ? init (page, aux) : true);
@@ -75,6 +73,6 @@ uninit_destroy (struct page *page) {
 	// 	file_info = (struct file_info *)uninit->aux;
 	// 	free(file_info);
 	// }
-	// /* TODO: Fill this function.
-	//  * TODO: If you don't have anything to do, just return. */
+	/* TODO: Fill this function.
+	 * TODO: If you don't have anything to do, just return. */
 }
