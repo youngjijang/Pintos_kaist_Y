@@ -128,6 +128,8 @@ do_munmap (void *addr) {
 		/* present bit을 0으로 만든다. */
 		pml4_clear_page(thread_current()->pml4, page->va);
 		addr += PAGE_SIZE;
+
+		free(f_info); //맞나??
 	}
 
 }

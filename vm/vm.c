@@ -146,7 +146,10 @@ void spt_remove_page(struct supplemental_page_table *spt, struct page *page)
 	return true;
 }
 
-/* Get the struct frame, that will be evicted. */
+/* Get the struct frame, that will be evicted.
+	희생될 frame 고르기
+	clock 알고리즘? accessed bit 확인?
+ */
 static struct frame *
 vm_get_victim(void)
 {
@@ -157,12 +160,18 @@ vm_get_victim(void)
 }
 
 /* Evict one page and return the corresponding frame.
- * Return NULL on error.*/
+ * Return NULL on error.
+  해당 프레임에 담긴 페이지를 제거하고 프레임을 반환한다. 
+ */
 static struct frame *
 vm_evict_frame(void)
 {
 	struct frame *victim UNUSED = vm_get_victim();
 	/* TODO: swap out the victim and return the evicted frame. */
+	struct page *page = victim->page;
+
+	//pml4_clear_page(thread_current()->pml4, page->va);
+	swap_out(page);
 
 	return NULL;
 }
@@ -185,7 +194,7 @@ vm_get_frame(void)
 	frame->kva = palloc_get_page(PAL_USER); //페이지를 할당 받아서 연결???
 	
 	if(frame->kva == NULL)
-		PANIC("todo");
+		PANIC("todo"); //이때 replacement 알고리즘 실행되야함.
 		
 	list_push_back(&frame_table,&frame->frame_elem);
 
@@ -238,7 +247,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 		// printf("lazy\n");
 		return vm_do_claim_page(page);
 	}
-	else if ( not_present && write && (f->rsp-8 == addr) && stack_bottom > USER_STACK - 0X100000){
+	else if ( not_present && write && (f->rsp-8 <= addr) && stack_bottom > USER_STACK - 0X100000){
 		// printf("grow\n");
 		vm_stack_growth(stack_bottom);
 		return true;
@@ -251,7 +260,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 
 /* Free the page.
  * DO NOT MODIFY THIS FUNCTION. */
-void vm_dealloc_page(struct page *page)
+void vm_dealloc_page(struct page *page) //frame도 해제??????
 {
 	destroy(page);
 	free(page);
@@ -356,7 +365,7 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
 }
 
 /* Free the resource hold by the supplemental page table */
-void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)
+void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)  
 {
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage. */
@@ -390,6 +399,12 @@ bool page_less(const struct hash_elem *a_,
 */
 void *page_destroy(struct hash_elem *h_elem, void *aux UNUSED){
 	struct page *p = hash_entry(h_elem, struct page, hash_elem);
+	struct frame *frame = p->frame;
+	if (frame != NULL)//{
+		free(frame);
+		// frame->page = NULL;
+	// 	pml4_clear_page(&thread_current()->spt,p->va);
+	// }
 	vm_dealloc_page(p);
 }
 

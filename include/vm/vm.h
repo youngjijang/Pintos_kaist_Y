@@ -137,7 +137,7 @@ bool mapped_less(const struct hash_elem *a_, const struct hash_elem *b_, void *a
 
 void *page_destroy(struct hash_elem *h_elem, void *aux UNUSED);
 
-struct list frame_table;
+struct list frame_table; // 프로그램 끝날때까지 유지
 struct list swap_table;
 
 struct file_info
