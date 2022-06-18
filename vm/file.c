@@ -62,6 +62,7 @@ void *
 do_mmap (void *addr, size_t length, int writable,struct file *file, off_t offset) {
 
 	struct file *m_file = file_reopen(file);
+	//각 매핑에 대한 파일에 대한 개별적이고 독립적인 참조를 얻으려면 reopen 함수를 사용해야 합니다.
 	// struct file *m_file = file_open(file);
 	struct thread* curr = thread_current();
 	struct mmap_file *mmap_file = (struct mmap_file *)malloc(sizeof(struct mmap_file));
@@ -92,7 +93,7 @@ do_mmap (void *addr, size_t length, int writable,struct file *file, off_t offset
 		if (p == NULL)
 			return NULL;
 			
-		// list_push_back (&mmap_file->page_list, &p->mmap_elem);
+		list_push_back (&mmap_file->page_list, &p->mmap_elem);
 		/* Advance. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
@@ -116,9 +117,9 @@ do_munmap (void *addr) {
 			break;
 		
 		struct file_info *f_info = (struct file_info *)page->uninit.aux;
+
 		/* 수정된 페이지(더티 비트 1)는 파일에 업데이트 해 놓는다. 
 		   그리고 더티 비트를 0으로 만들어둔다. */
-
 		if (pml4_is_dirty(thread_current()->pml4, page->va)){
 			file_write_at(f_info->file, addr, f_info->page_read_bytes, f_info->ofs);
 			pml4_set_dirty(thread_current()->pml4, page->va, 0);
