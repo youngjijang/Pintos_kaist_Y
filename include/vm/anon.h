@@ -6,7 +6,7 @@ enum vm_type;
 
 struct anon_page {
     struct page_operations *stack_op; //?? 몰라 .. page type으로 스택을 식별?
-    // struct list_elem swap_elem; 
+     int swap_index; 
 };
 
 void vm_anon_init (void);

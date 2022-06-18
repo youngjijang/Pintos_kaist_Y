@@ -3,6 +3,8 @@
 #include "vm/vm.h"
 #include "../include/userprog/process.h"
 
+#define FISIZE (1 << 12)
+static struct disk *file_disk;
 
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
@@ -19,28 +21,60 @@ static const struct page_operations file_ops = {
 /* The initializer of file vm */
 void
 vm_file_init (void) {
-	// hash_init(&thread_current()->mmap_hash,mapped_hash,mapped_less,NULL);
+	file_disk = disk_get(0, 1);
 }
 
 /* Initialize the file backed page */
 bool
 file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
+	
+	// struct uninit_page *uninit = &page->uninit;
+	// memset(uninit, 0, sizeof(struct uninit_page));
+
 	/* Set up the handler */
 	page->operations = &file_ops;
-
 	struct file_page *file_page = &page->file;
+
+	return true;
 }
 
 /* Swap in the page by read contents from the file. */
 static bool
 file_backed_swap_in (struct page *page, void *kva) {
 	struct file_page *file_page UNUSED = &page->file;
+
+	// struct file *file = ((struct file_info *)page->file_inf)->file;
+	// off_t offset = ((struct file_info *)page->file_inf)->ofs;
+	// size_t page_read_bytes = ((struct file_info *)page->file_inf)->page_read_bytes;
+	// size_t page_zero_bytes = FISIZE - page_read_bytes;
+
+	// file_seek(file, offset); // file의 오프셋을 offset으로 바꾼다. 이제 offset부터 읽기 시작한다.
+
+	// off_t read_off = file_read(file, page->frame->kva, page_read_bytes);
+	// if (read_off != (int)page_read_bytes)
+	// {
+	// 	palloc_free_page(page->frame->kva);
+	// 	return false;
+	// }
+
+	// memset(page->frame->kva + page_read_bytes, 0, page_zero_bytes);
+
+	// return true;
 }
 
 /* Swap out the page by writeback contents to the file. */
 static bool
 file_backed_swap_out (struct page *page) {
 	struct file_page *file_page UNUSED = &page->file;
+
+	// if (pml4_is_dirty(thread_current()->pml4, page->va)){
+	// 	file_write_at(page->file_inf->file, page->va, page->file_inf->page_read_bytes, page->file_inf->ofs);
+	// 	// if (write_bytes != page->file_inf->read_bytes || write_bytes == 0)
+	// 	// 	return false;
+	// 	pml4_set_dirty(thread_current()->pml4, page->va, 0);
+	// }
+	// pml4_clear_page(thread_current()->pml4, page->va);
+	// return true;
 }
 
 /* Destory the file backed page. PAGE will be freed by the caller. */
@@ -160,7 +194,6 @@ lazy_load_file(struct page *page, void *aux)
 	// printf("안녕여여여여여여ㅕ여영\n\n");
 	memset((page->frame->kva)+page_read_bytes, 0, page_zero_bytes); // 기록 - 여기 수정
 	/* Add the page to the process's address space. */
-	// free(aux); //fork_read에서 터짐
 	
 	return true;
 }

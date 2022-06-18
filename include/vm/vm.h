@@ -54,6 +54,8 @@ struct page {
 	struct hash_elem hash_elem; /* 추가 - Hash table element. */
 	bool writable; //쓰기 권한 추가?? pml4_set_page 때 사용
 
+	struct file_info *file_inf;
+
 	struct list_elem mmap_elem;
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
@@ -138,7 +140,8 @@ bool mapped_less(const struct hash_elem *a_, const struct hash_elem *b_, void *a
 void *page_destroy(struct hash_elem *h_elem, void *aux UNUSED);
 
 struct list frame_table; // 프로그램 끝날때까지 유지
-struct list swap_table;
+struct list_elem *clock_elem;
+
 
 struct file_info
 {

@@ -25,7 +25,6 @@ void vm_init(void)
 
 	//1번 - frame talble 추가
 	list_init(&frame_table);
-	list_init(&swap_table);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -155,6 +154,25 @@ vm_get_victim(void)
 {
 	struct frame *victim = NULL;
 	/* TODO: The policy for eviction is up to you. */
+	while (victim == NULL)
+	{
+		struct frame *frame = list_entry(clock_elem, struct frame, frame_elem);
+		if (pml4_is_accessed(thread_current()->pml4, frame->page->va))
+		{
+			pml4_set_accessed(thread_current()->pml4, frame->page->va, 0);
+		}
+		else
+		{
+			victim = frame;
+		}
+
+		clock_elem = list_next(clock_elem);
+
+		if (clock_elem != NULL && clock_elem->prev != NULL && clock_elem->next == NULL)
+		{
+			clock_elem = list_begin(&frame_table);
+		}
+	}
 
 	return victim;
 }
@@ -172,10 +190,10 @@ vm_evict_frame(void)
 
 	//pml4_clear_page(thread_current()->pml4, page->va);
 	swap_out(page);
+	palloc_free_page(victim->kva);
 
-	return NULL;
+	return victim;
 }
-
 /*
  * 1번 - 추가 물리메모리 할당받는 함수???
  * palloc() and get frame. If there is no available page, evict the page
@@ -193,10 +211,18 @@ vm_get_frame(void)
 	struct frame *frame = malloc(sizeof(struct frame)); //프레임 생성 - 커널영역에 할당
 	frame->kva = palloc_get_page(PAL_USER); //페이지를 할당 받아서 연결???
 	
-	if(frame->kva == NULL)
-		PANIC("todo"); //이때 replacement 알고리즘 실행되야함.
+	if(frame->kva == NULL){
+		//PANIC("todo"); //이때 replacement 알고리즘 실행되야함.
+		if (clock_elem == NULL)
+			clock_elem = list_begin(&frame_table);
+
+		frame = vm_evict_frame();
+		frame->kva = palloc_get_page(PAL_USER);
+		frame->page = NULL;
+		return frame; // eviction된 kva에 매핑
+	}
 		
-	list_push_back(&frame_table,&frame->frame_elem);
+	list_push_back(&frame_table,&frame->frame_elem); //왜 주석???
 
 	frame->page = NULL; //추가
 	
