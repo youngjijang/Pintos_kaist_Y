@@ -25,6 +25,7 @@ void vm_init(void)
 
 	//1번 - frame talble 추가
 	list_init(&frame_table);
+	clock_elem = list_begin(&frame_table);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -154,24 +155,24 @@ vm_get_victim(void)
 {
 	struct frame *victim = NULL;
 	/* TODO: The policy for eviction is up to you. */
-	while (victim == NULL)
+	struct list_elem *e = clock_elem;
+	struct thread *curr = thread_current();
+	for (clock_elem = e; clock_elem != list_end(&frame_table); clock_elem = list_next(clock_elem))
 	{
-		struct frame *frame = list_entry(clock_elem, struct frame, frame_elem);
-		if (pml4_is_accessed(thread_current()->pml4, frame->page->va))
-		{
-			pml4_set_accessed(thread_current()->pml4, frame->page->va, 0);
-		}
+		victim = list_entry(clock_elem, struct frame, frame_elem);
+		if (pml4_is_accessed(curr->pml4, victim->page->va))
+			pml4_set_accessed(curr->pml4, victim->page->va, 0);
 		else
-		{
-			victim = frame;
-		}
+			return victim;
+	}
 
-		clock_elem = list_next(clock_elem);
-
-		if (clock_elem != NULL && clock_elem->prev != NULL && clock_elem->next == NULL)
-		{
-			clock_elem = list_begin(&frame_table);
-		}
+	for (clock_elem = list_begin(&frame_table); clock_elem != e; clock_elem = list_next(clock_elem))
+	{
+		victim = list_entry(clock_elem, struct frame, frame_elem);
+		if (pml4_is_accessed(curr->pml4, victim->page->va))
+			pml4_set_accessed(curr->pml4, victim->page->va, 0);
+		else
+			return victim;
 	}
 
 	return victim;
@@ -188,9 +189,8 @@ vm_evict_frame(void)
 	/* TODO: swap out the victim and return the evicted frame. */
 	struct page *page = victim->page;
 
-	//pml4_clear_page(thread_current()->pml4, page->va);
 	swap_out(page);
-	palloc_free_page(victim->kva);
+	// palloc_free_page(victim->kva);
 
 	return victim;
 }
@@ -213,11 +213,7 @@ vm_get_frame(void)
 	
 	if(frame->kva == NULL){
 		//PANIC("todo"); //이때 replacement 알고리즘 실행되야함.
-		if (clock_elem == NULL)
-			clock_elem = list_begin(&frame_table);
-
 		frame = vm_evict_frame();
-		frame->kva = palloc_get_page(PAL_USER);
 		frame->page = NULL;
 		return frame; // eviction된 kva에 매핑
 	}
@@ -426,8 +422,8 @@ bool page_less(const struct hash_elem *a_,
 void *page_destroy(struct hash_elem *h_elem, void *aux UNUSED){
 	struct page *p = hash_entry(h_elem, struct page, hash_elem);
 	struct frame *frame = p->frame;
-	if (frame != NULL)//{
-		free(frame);
+	// if (frame != NULL)//{
+	// 	free(frame);
 		// frame->page = NULL;
 	// 	pml4_clear_page(&thread_current()->spt,p->va);
 	// }

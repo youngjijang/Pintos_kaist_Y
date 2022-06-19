@@ -21,7 +21,7 @@ static const struct page_operations file_ops = {
 /* The initializer of file vm */
 void
 vm_file_init (void) {
-	file_disk = disk_get(0, 1);
+	// file_disk = disk_get(0, 1);
 }
 
 /* Initialize the file backed page */
@@ -43,23 +43,26 @@ static bool
 file_backed_swap_in (struct page *page, void *kva) {
 	struct file_page *file_page UNUSED = &page->file;
 
-	// struct file *file = ((struct file_info *)page->file_inf)->file;
-	// off_t offset = ((struct file_info *)page->file_inf)->ofs;
-	// size_t page_read_bytes = ((struct file_info *)page->file_inf)->page_read_bytes;
-	// size_t page_zero_bytes = FISIZE - page_read_bytes;
+	if (page == NULL)
+		return false;
 
-	// file_seek(file, offset); // file의 오프셋을 offset으로 바꾼다. 이제 offset부터 읽기 시작한다.
+	struct file *file = ((struct file_info *)page->file_inf)->file;
+	off_t offset = ((struct file_info *)page->file_inf)->ofs;
+	size_t page_read_bytes = ((struct file_info *)page->file_inf)->page_read_bytes;
+	size_t page_zero_bytes = FISIZE - page_read_bytes;
 
-	// off_t read_off = file_read(file, page->frame->kva, page_read_bytes);
-	// if (read_off != (int)page_read_bytes)
-	// {
-	// 	palloc_free_page(page->frame->kva);
-	// 	return false;
-	// }
+	file_seek(file, offset); // file의 오프셋을 offset으로 바꾼다. 이제 offset부터 읽기 시작한다.
 
-	// memset(page->frame->kva + page_read_bytes, 0, page_zero_bytes);
+	off_t read_off = file_read(file, kva, page_read_bytes);
+	if (read_off != (int)page_read_bytes)
+	{
+		// palloc_free_page(page->frame->kva);
+		return false;
+	}
 
-	// return true;
+	memset(kva + page_read_bytes, 0, page_zero_bytes);
+
+	return true;
 }
 
 /* Swap out the page by writeback contents to the file. */
@@ -67,14 +70,14 @@ static bool
 file_backed_swap_out (struct page *page) {
 	struct file_page *file_page UNUSED = &page->file;
 
-	// if (pml4_is_dirty(thread_current()->pml4, page->va)){
-	// 	file_write_at(page->file_inf->file, page->va, page->file_inf->page_read_bytes, page->file_inf->ofs);
-	// 	// if (write_bytes != page->file_inf->read_bytes || write_bytes == 0)
-	// 	// 	return false;
-	// 	pml4_set_dirty(thread_current()->pml4, page->va, 0);
-	// }
-	// pml4_clear_page(thread_current()->pml4, page->va);
-	// return true;
+	if (page == NULL)
+		return false;
+
+	if (pml4_is_dirty(thread_current()->pml4, page->va)){
+		file_write_at(page->file_inf->file, page->va, page->file_inf->page_read_bytes, page->file_inf->ofs);
+		pml4_set_dirty(thread_current()->pml4, page->va, 0);
+	}
+	pml4_clear_page(thread_current()->pml4, page->va);
 }
 
 /* Destory the file backed page. PAGE will be freed by the caller. */
